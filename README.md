@@ -11,4 +11,4 @@ I currently intend to bolt on a Vue.js web App to provide an iteractive front en
 - Gain a better understanding of DynamoDB and NoSQL data modelling (coming from an SQL background)
 - Learn how to integrate DynamoDB with PHP*
 
-*Project will be ported to Python if it goes well and I decide to create a Lambda driven API Gateway infrastructure
+*Project will probably be ported to Python to create a Lambda driven API Gateway infrastructure later.
