@@ -1,0 +1,47 @@
+#!/usr/bin/env php
+<?php
+
+require '.bootstrap.php';
+
+use Aws\DynamoDb\DynamoDbClient;
+use Danielcraigie\Bookshop\AWS\dynamodb\attributes\AttributeDefinition;
+use Danielcraigie\Bookshop\AWS\dynamodb\attributes\GlobalSecondaryIndex;
+use Danielcraigie\Bookshop\AWS\dynamodb\attributes\Key;
+use Danielcraigie\Bookshop\AWS\dynamodb\attributes\Projection;
+use Danielcraigie\Bookshop\AWS\dynamodb\attributes\ProvisionedThroughput;
+use Danielcraigie\Bookshop\AWS\dynamodb\CreateTable;
+
+try {
+    $createTable = new CreateTable($_ENV['TABLE_NAME']);
+
+    $createTable->addAttributeDefinition(new AttributeDefinition('PK'));
+    $createTable->addAttributeDefinition(new AttributeDefinition('SK'));
+    $createTable->addAttributeDefinition(new AttributeDefinition('GSI1-PK'));
+    $createTable->addAttributeDefinition(new AttributeDefinition('GSI1-SK'));
+
+    $createTable->addKeyToSchema(new Key('PK'));
+    $createTable->addKeyToSchema(new Key('SK', Key::TYPE_RANGE));
+
+    $createTable->setProvisionedThroughput(new ProvisionedThroughput(1, 1));
+
+    $createTable->addGlobalSecondaryIndex(new GlobalSecondaryIndex('GSI1', [
+        new Key('GSI1-PK'),
+        new Key('GSI1-SK', Key::TYPE_RANGE),
+    ],
+        new Projection(),
+        new ProvisionedThroughput(1, 1)
+    ));
+} catch (Throwable $e) {
+    echo "An error occurred while constructing table definition: {$e->getMessage()}";
+    return 1;
+}
+
+try {
+    /** @var DynamoDbClient $client */
+    $response = $client->createTable($createTable->getTableDefinition());
+
+    echo "Creating table \"{$response['TableDescription']['TableName']}\"\n";
+} catch (Throwable $e) {
+    echo "An error occurred while creating the table: {$e->getMessage()}";
+    return 1;
+}

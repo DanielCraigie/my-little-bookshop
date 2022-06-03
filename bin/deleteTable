@@ -1,0 +1,11 @@
+#!/usr/bin/env php
+<?php
+
+require '.bootstrap.php';
+
+use Aws\DynamoDb\DynamoDbClient;
+
+/** @var DynamoDbClient $client */
+$response = $client->deleteTable(['TableName' => $_ENV['TABLE_NAME']]);
+
+echo "Deleting table \"{$response['TableDescription']['TableName']}\" with {$response['TableDescription']['ItemCount']} records\n";

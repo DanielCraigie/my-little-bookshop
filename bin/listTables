@@ -1,0 +1,14 @@
+#!/usr/bin/env php
+<?php
+
+require '.bootstrap.php';
+
+/** @var \Aws\DynamoDb\DynamoDbClient $client */
+$result = $client->listTables();
+
+if (count($result['TableNames'])) {
+    echo "Table Names:\n";
+    foreach ($result['TableNames'] as $tableName) {
+        echo " - $tableName\n";
+    }
+} else echo "No tables found.\n";
