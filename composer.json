@@ -13,6 +13,12 @@
         }
     ],
     "require": {
-        "aws/aws-sdk-php": "^3.222"
+        "aws/aws-sdk-php": "^3.222",
+        "vlucas/phpdotenv": "^5.4"
+    },
+    "require-dev": {
+        "codeception/codeception": "^4.1",
+        "codeception/module-phpbrowser": "^1.0.0",
+        "codeception/module-asserts": "^1.0.0"
     }
 }
