@@ -1,0 +1,606 @@
+{
+  "ModelName": "Bookshop",
+  "ModelMetadata": {
+    "Author": "Daniel Craigie",
+    "DateCreated": "May 20, 2022, 10:05 AM",
+    "DateLastModified": "Feb 25, 2023, 09:11 PM",
+    "Description": "Bookshop data model",
+    "AWSService": "Amazon DynamoDB",
+    "Version": "3.0"
+  },
+  "DataModel": [
+    {
+      "TableName": "Bookshop_Table",
+      "KeyAttributes": {
+        "PartitionKey": {
+          "AttributeName": "PK",
+          "AttributeType": "S"
+        },
+        "SortKey": {
+          "AttributeName": "SK",
+          "AttributeType": "S"
+        }
+      },
+      "NonKeyAttributes": [
+        {
+          "AttributeName": "EntityType",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "Value",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "Details",
+          "AttributeType": "M"
+        },
+        {
+          "AttributeName": "Price",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "Quantity",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "Address",
+          "AttributeType": "M"
+        },
+        {
+          "AttributeName": "Type",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1-PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1-SK",
+          "AttributeType": "S"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "GSI1",
+          "KeyAttributes": {
+            "PartitionKey": {
+              "AttributeName": "GSI1-PK",
+              "AttributeType": "S"
+            },
+            "SortKey": {
+              "AttributeName": "GSI1-SK",
+              "AttributeType": "S"
+            }
+          },
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        }
+      ],
+      "TableData": [
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
+            "S": "book#0-434-02110-5"
+          },
+          "EntityType": {
+            "S": "book"
+          },
+          "Details": {
+            "M": {
+              "Tag line": {
+                "S": "The Making of the British Intelligence Community"
+              },
+              "Format": {
+                "S": "Hardback"
+              }
+            }
+          },
+          "Price": {
+            "S": "£14.00"
+          },
+          "Quantity": {
+            "S": "5"
+          }
+        },
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
+            "S": "title#1"
+          },
+          "EntityType": {
+            "S": "title"
+          },
+          "Value": {
+            "S": "Secret Service"
+          }
+        },
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
+            "S": "author#1"
+          },
+          "EntityType": {
+            "S": "author"
+          },
+          "Value": {
+            "S": "Christopher Andrew"
+          },
+          "GSI1-PK": {
+            "S": "author#1"
+          },
+          "GSI1-SK": {
+            "S": "book#0-434-02110-5"
+          }
+        },
+        {
+          "PK": {
+            "S": "author#1"
+          },
+          "SK": {
+            "S": "Christopher Andrew"
+          },
+          "GSI1-PK": {
+            "S": "authors"
+          },
+          "GSI1-SK": {
+            "S": "Christopher Andrew"
+          }
+        },
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
+            "S": "genre#1"
+          },
+          "EntityType": {
+            "S": "genre"
+          },
+          "Value": {
+            "S": "History"
+          },
+          "GSI1-PK": {
+            "S": "genre#1"
+          },
+          "GSI1-SK": {
+            "S": "book#0-434-02110-5"
+          }
+        },
+        {
+          "PK": {
+            "S": "genre#1"
+          },
+          "SK": {
+            "S": "History"
+          },
+          "GSI1-PK": {
+            "S": "genres"
+          },
+          "GSI1-SK": {
+            "S": "History"
+          }
+        },
+        {
+          "PK": {
+            "S": "publisher#1"
+          },
+          "SK": {
+            "S": "Heinemann - London"
+          },
+          "GSI1-PK": {
+            "S": "publishers"
+          },
+          "GSI1-SK": {
+            "S": "Heinemann - London"
+          }
+        },
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
+            "S": "publisher#1"
+          },
+          "EntityType": {
+            "S": "publisher"
+          },
+          "Value": {
+            "S": "Heinemann - London"
+          },
+          "GSI1-PK": {
+            "S": "publisher#1"
+          },
+          "GSI1-SK": {
+            "S": "book#0-434-02110-5"
+          }
+        },
+        {
+          "PK": {
+            "S": "customer#1"
+          },
+          "SK": {
+            "S": "name"
+          },
+          "Value": {
+            "S": "Bob Smith"
+          },
+          "GSI1-PK": {
+            "S": "customers"
+          },
+          "GSI1-SK": {
+            "S": "Bob Smith"
+          }
+        },
+        {
+          "PK": {
+            "S": "customer#1"
+          },
+          "SK": {
+            "S": "address#1"
+          },
+          "EntityType": {
+            "S": "address"
+          },
+          "Details": {
+            "M": {
+              "Street1": {
+                "S": "36 Greenham Wood"
+              },
+              "City": {
+                "S": "Bracknell"
+              },
+              "County": {
+                "S": "Berkshire"
+              },
+              "Postcode": {
+                "S": "RG12 7WJ"
+              }
+            }
+          }
+        },
+        {
+          "PK": {
+            "S": "customer#1"
+          },
+          "SK": {
+            "S": "email#1"
+          },
+          "EntityType": {
+            "S": "email"
+          },
+          "Value": {
+            "S": "bob.smith@aol.com"
+          }
+        },
+        {
+          "PK": {
+            "S": "customer#1"
+          },
+          "SK": {
+            "S": "phone#1"
+          },
+          "EntityType": {
+            "S": "phone"
+          },
+          "Value": {
+            "S": "01344484122"
+          },
+          "Type": {
+            "S": "Home"
+          }
+        },
+        {
+          "PK": {
+            "S": "sale#1"
+          },
+          "SK": {
+            "S": "sale"
+          },
+          "EntityType": {
+            "S": "sale"
+          },
+          "Details": {
+            "M": {
+              "Date": {
+                "S": "2022-05-10"
+              },
+              "Date Shipped": {
+                "S": "NULL"
+              },
+              "Total": {
+                "S": "£14.00"
+              },
+              "Discount": {
+                "S": "£0.00"
+              },
+              "Shipping": {
+                "S": "£0.00"
+              }
+            }
+          },
+          "GSI1-PK": {
+            "S": "2022-05-10"
+          },
+          "GSI1-SK": {
+            "S": "sale#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "sale#1"
+          },
+          "SK": {
+            "S": "customer#1"
+          },
+          "EntityType": {
+            "S": "customer"
+          },
+          "Value": {
+            "S": "Bob Smith"
+          },
+          "GSI1-PK": {
+            "S": "customer#1"
+          },
+          "GSI1-SK": {
+            "S": "sale#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "sale#1"
+          },
+          "SK": {
+            "S": "address#1"
+          },
+          "EntityType": {
+            "S": "address"
+          },
+          "Details": {
+            "M": {
+              "Street1": {
+                "S": "36 Greenham Wood"
+              },
+              "City": {
+                "S": "Bracknell"
+              },
+              "County": {
+                "S": "Berkshire"
+              },
+              "Postcode": {
+                "S": "RG12 7WJ"
+              }
+            }
+          }
+        },
+        {
+          "PK": {
+            "S": "sale#1"
+          },
+          "SK": {
+            "S": "book#0-434-02110-5"
+          },
+          "EntityType": {
+            "S": "title"
+          },
+          "Value": {
+            "S": "Secret Service"
+          },
+          "Price": {
+            "S": "£14.00"
+          },
+          "GSI1-PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "GSI1-SK": {
+            "S": "sale#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "order#1"
+          },
+          "SK": {
+            "S": "order"
+          },
+          "EntityType": {
+            "S": "order"
+          },
+          "Details": {
+            "M": {
+              "Order Date": {
+                "S": "2022-02-22"
+              },
+              "Total Cost": {
+                "S": "£14.00"
+              },
+              "Date Received": {
+                "S": "2022-03-01"
+              }
+            }
+          },
+          "GSI1-PK": {
+            "S": "2022-02-22"
+          },
+          "GSI1-SK": {
+            "S": "order#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "order#1"
+          },
+          "SK": {
+            "S": "book#0-434-02110-5"
+          },
+          "EntityType": {
+            "S": "title"
+          },
+          "Value": {
+            "S": "Secret Service"
+          },
+          "Price": {
+            "S": "£14.00"
+          },
+          "Quantity": {
+            "S": "1"
+          },
+          "GSI1-PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "GSI1-SK": {
+            "S": "order#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "order#1"
+          },
+          "SK": {
+            "S": "supplier#1"
+          },
+          "EntityType": {
+            "S": "supplier"
+          },
+          "Value": {
+            "S": "Bob's Books"
+          },
+          "GSI1-PK": {
+            "S": "supplier#1"
+          },
+          "GSI1-SK": {
+            "S": "order#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "supplier#1"
+          },
+          "SK": {
+            "S": "name"
+          },
+          "EntityType": {
+            "S": "supplier"
+          },
+          "Value": {
+            "S": "Bob's Books"
+          },
+          "GSI1-PK": {
+            "S": "suppliers"
+          },
+          "GSI1-SK": {
+            "S": "Bob's Books"
+          }
+        },
+        {
+          "PK": {
+            "S": "supplier#1"
+          },
+          "SK": {
+            "S": "address#1"
+          },
+          "EntityType": {
+            "S": "address"
+          },
+          "Details": {
+            "M": {
+              "Street1": {
+                "S": "36 Greenham Wood"
+              },
+              "City": {
+                "S": "Bracknell"
+              },
+              "County": {
+                "S": "Berkshire"
+              },
+              "Postcode": {
+                "S": "RG12 7WJ"
+              }
+            }
+          }
+        },
+        {
+          "PK": {
+            "S": "supplier#1"
+          },
+          "SK": {
+            "S": "email#1"
+          },
+          "EntityType": {
+            "S": "email"
+          },
+          "Value": {
+            "S": "sales@bobs-books.net"
+          }
+        },
+        {
+          "PK": {
+            "S": "suppler#1"
+          },
+          "SK": {
+            "S": "phone#1"
+          },
+          "EntityType": {
+            "S": "phone"
+          },
+          "Value": {
+            "S": "0126346353"
+          },
+          "Type": {
+            "S": "Work"
+          }
+        },
+        {
+          "PK": {
+            "S": "title#1"
+          },
+          "SK": {
+            "S": "Secret Service"
+          },
+          "GSI1-PK": {
+            "S": "titles"
+          },
+          "GSI1-SK": {
+            "S": "Secret Service"
+          }
+        }
+      ],
+      "DataAccess": {
+        "MySql": {}
+      },
+      "BillingMode": "PROVISIONED",
+      "ProvisionedCapacitySettings": {
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        },
+        "AutoScalingRead": {
+          "ScalableTargetRequest": {
+            "MinCapacity": 1,
+            "MaxCapacity": 10,
+            "ServiceRole": "AWSServiceRoleForApplicationAutoScaling_DynamoDBTable"
+          },
+          "ScalingPolicyConfiguration": {
+            "TargetValue": 70
+          }
+        },
+        "AutoScalingWrite": {
+          "ScalableTargetRequest": {
+            "MinCapacity": 1,
+            "MaxCapacity": 10,
+            "ServiceRole": "AWSServiceRoleForApplicationAutoScaling_DynamoDBTable"
+          },
+          "ScalingPolicyConfiguration": {
+            "TargetValue": 70
+          }
+        }
+      }
+    }
+  ]
+}
