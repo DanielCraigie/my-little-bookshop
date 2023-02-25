@@ -1,46 +1,72 @@
 #!/usr/bin/env php
 <?php
 
-require '.bootstrap.php';
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
 use Aws\DynamoDb\DynamoDbClient;
-use Danielcraigie\Bookshop\AWS\dynamodb\attributes\AttributeDefinition;
-use Danielcraigie\Bookshop\AWS\dynamodb\attributes\GlobalSecondaryIndex;
-use Danielcraigie\Bookshop\AWS\dynamodb\attributes\Key;
-use Danielcraigie\Bookshop\AWS\dynamodb\attributes\Projection;
-use Danielcraigie\Bookshop\AWS\dynamodb\attributes\ProvisionedThroughput;
-use Danielcraigie\Bookshop\AWS\dynamodb\CreateTable;
 
+/** @var DynamoDbClient $dynClient */
 try {
-    $createTable = new CreateTable($_ENV['TABLE_NAME']);
+    $result = $dynClient->createTable([
+        'AttributeDefinitions' => [
+            [
+                'AttributeName' => 'PK',
+                'AttributeType' => 'S',
+            ],
+            [
+                'AttributeName' => 'SK',
+                'AttributeType' => 'S',
+            ],
+            [
+                'AttributeName' => 'GSI1-PK',
+                'AttributeType' => 'S',
+            ],
+            [
+                'AttributeName' => 'GSI1-SK',
+                'AttributeType' => 'S',
+            ],
+        ],
+        'GlobalSecondaryIndexes' => [
+            [
+                'IndexName' => 'GSI1',
+                'KeySchema' => [
+                    [
+                        'AttributeName' => 'GSI1-PK',
+                        'KeyType' => 'HASH',
+                    ],
+                    [
+                        'AttributeName' => 'GSI1-SK',
+                        'KeyType' => 'RANGE',
+                    ],
+                ],
+                'Projection' => [
+                    'ProjectionType' => 'KEYS_ONLY',
+                    ''
+                ],
+            ],
+        ],
+        'KeySchema' => [
+            [
+                'AttributeName' => 'PK',
+                'KeyType' => 'HASH',
+            ],
+            [
+                'AttributeName' => 'SK',
+                'KeyType' => 'RANGE',
+            ]
+        ],
+        'ProvisionedThroughput' => [
+            'ReadCapacityUnits' => 1,
+            'WriteCapacityUnits' => 1,
+        ],
+        'TableName' => $_ENV['TABLE_NAME'],
+    ]);
 
-    $createTable->addAttributeDefinition(new AttributeDefinition('PK'));
-    $createTable->addAttributeDefinition(new AttributeDefinition('SK'));
-    $createTable->addAttributeDefinition(new AttributeDefinition('GSI1-PK'));
-    $createTable->addAttributeDefinition(new AttributeDefinition('GSI1-SK'));
+    if ($result['TableDescription']['TableStatus'] != 'ACTIVE') {
+        throw new Exception('Table: ' . $_ENV['TABLE_NAME'] . ' could not be created.');
+    }
 
-    $createTable->addKeyToSchema(new Key('PK'));
-    $createTable->addKeyToSchema(new Key('SK', Key::TYPE_RANGE));
-
-    $createTable->setProvisionedThroughput(new ProvisionedThroughput(1, 1));
-
-    $createTable->addGlobalSecondaryIndex(new GlobalSecondaryIndex('GSI1', [
-        new Key('GSI1-PK'),
-        new Key('GSI1-SK', Key::TYPE_RANGE),
-    ],
-        new Projection(),
-        new ProvisionedThroughput(1, 1)
-    ));
-} catch (Throwable $e) {
-    echo "An error occurred while constructing table definition: {$e->getMessage()}";
-    return 1;
-}
-
-try {
-    /** @var DynamoDbClient $client */
-    $response = $client->createTable($createTable->getTableDefinition());
-
-    echo "Creating table \"{$response['TableDescription']['TableName']}\"\n";
+    echo "Table[{$_ENV['TABLE_NAME']} created.\n";
 } catch (Throwable $e) {
     echo "An error occurred while creating the table: {$e->getMessage()}";
     return 1;
