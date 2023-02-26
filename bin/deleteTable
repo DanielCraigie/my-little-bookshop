@@ -1,11 +1,27 @@
 #!/usr/bin/env php
 <?php
 
-require '.bootstrap.php';
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
 use Aws\DynamoDb\DynamoDbClient;
+use AWS\Result;
 
-/** @var DynamoDbClient $client */
-$response = $client->deleteTable(['TableName' => $_ENV['TABLE_NAME']]);
+/** @var DynamoDbClient $dynClient */
+/** @var string $tableName */
 
-echo "Deleting table \"{$response['TableDescription']['TableName']}\" with {$response['TableDescription']['ItemCount']} records\n";
+try {
+    $result = $dynClient->listTables();
+    if ($result instanceof Result) {
+        if (in_array($tableName, $result['TableNames'])) {
+            $response = $dynClient->deleteTable(['TableName' => $tableName]);
+            echo "Deleting table \"{$response['TableDescription']['TableName']}\" with {$response['TableDescription']['ItemCount']} records\n";
+        } else {
+            throw new Exception('Table[' . $tableName . '] not found.');
+        }
+    } else {
+        throw new Exception('An error occurred when performing table lookup.');
+    }
+} catch (Exception $e) {
+    echo "An error occurred while deleting the table: {$e->getMessage()}";
+    return 1;
+}

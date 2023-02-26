@@ -24,3 +24,5 @@ $dynClient = $sdk->createDynamoDb([
     'version' => $_ENV['DYNAMODB_VERSION'],
     'endpoint' => $_ENV['DYNAMODB_ENDPOINT'],
 ]);
+
+$tableName = $_ENV['TABLE_NAME'];

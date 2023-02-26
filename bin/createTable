@@ -4,9 +4,22 @@
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
 use Aws\DynamoDb\DynamoDbClient;
+use AWS\Result;
 
 /** @var DynamoDbClient $dynClient */
+/** @var string $tableName */
+
 try {
+    $result = $dynClient->listTables();
+    if ($result instanceof Result) {
+        if (in_array($tableName, $result['TableNames'])) {
+            echo "Table[{$tableName}] already exists.\n";
+            return 0;
+        }
+    } else {
+        throw new Exception('An error occurred when performing table lookup.');
+    }
+
     $result = $dynClient->createTable([
         'AttributeDefinitions' => [
             [
@@ -40,8 +53,11 @@ try {
                     ],
                 ],
                 'Projection' => [
-                    'ProjectionType' => 'KEYS_ONLY',
-                    ''
+                    'ProjectionType' => 'ALL',
+                ],
+                'ProvisionedThroughput' => [
+                    'ReadCapacityUnits' => 1,
+                    'WriteCapacityUnits' => 1,
                 ],
             ],
         ],
@@ -59,14 +75,14 @@ try {
             'ReadCapacityUnits' => 1,
             'WriteCapacityUnits' => 1,
         ],
-        'TableName' => $_ENV['TABLE_NAME'],
+        'TableName' => $tableName,
     ]);
 
     if ($result['TableDescription']['TableStatus'] != 'ACTIVE') {
-        throw new Exception('Table: ' . $_ENV['TABLE_NAME'] . ' could not be created.');
+        throw new Exception('Table: ' . $tableName . ' could not be created.');
     }
 
-    echo "Table[{$_ENV['TABLE_NAME']} created.\n";
+    echo "Table[{$tableName}] created.\n";
 } catch (Throwable $e) {
     echo "An error occurred while creating the table: {$e->getMessage()}";
     return 1;
