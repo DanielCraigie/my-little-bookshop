@@ -4,22 +4,19 @@
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
 use Aws\DynamoDb\DynamoDbClient;
-use AWS\Result;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 
 /** @var DynamoDbClient $dynClient */
 /** @var string $tableName */
 
 try {
-    $result = $dynClient->listTables();
-    if ($result instanceof Result) {
-        if (in_array($tableName, $result['TableNames'])) {
-            $response = $dynClient->deleteTable(['TableName' => $tableName]);
-            echo "Deleting table \"{$response['TableDescription']['TableName']}\" with {$response['TableDescription']['ItemCount']} records\n";
-        } else {
-            throw new Exception('Table[' . $tableName . '] not found.');
-        }
+    $table = new Table($dynClient, $tableName);
+
+    if ($table->exists()) {
+        $response = $dynClient->deleteTable(['TableName' => $tableName]);
+        echo "Deleting table \"{$response['TableDescription']['TableName']}\" with {$response['TableDescription']['ItemCount']} records\n";
     } else {
-        throw new Exception('An error occurred when performing table lookup.');
+        throw new Exception('Table[' . $tableName . '] not found.');
     }
 } catch (Exception $e) {
     echo "An error occurred while deleting the table: {$e->getMessage()}";

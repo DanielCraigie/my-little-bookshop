@@ -1,0 +1,101 @@
+#!/usr/bin/env php
+<?php
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+    || count($argv) == 1
+):?>
+getSupplier - provides details for a supplier Name/PK
+
+Options:
+    -p, --partition-key
+    -n, --name
+
+Usage:
+    getSupplier --partition-key <supplier PK>
+    getSupplier --name <supplier Name>
+    getSupplier --help
+
+<?php
+exit;
+endif;
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\Result;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+
+/** @var DynamoDbClient $dynClient */
+/** @var string $tableName */
+
+$partitionKey = '';
+
+try {
+    // verify table exists
+    $table = new Table($dynClient, $tableName);
+    if (!$table->exists()) {
+        throw new Exception("Table[{$tableName}] doesn't exists.");
+    }
+
+    /*
+     * Handle user arguments
+     */
+    for ($i = 1; $i < $argc; $i++) {
+        switch ($argv[$i]) {
+            case '-p':
+            case '--partition-key':
+                $partitionKey = $argv[++$i];
+                break;
+            case '-n':
+            case '--name':
+                // use supplier name search text to locate first match
+                $name = $argv[++$i];
+                $result = $dynClient->query([
+                    'IndexName' => 'GSI1',
+                    'KeyConditionExpression' => 'GSI1PK=:pk AND begins_with(GSI1SK, :sk)',
+                    'ExpressionAttributeValues' => [
+                        ':pk' => ['S' => 'suppliers'],
+                        ':sk' => ['S' => $name],
+                    ],
+                    'TableName' => $tableName,
+                ]);
+                if (!$result instanceof Result) {
+                    throw new Exception('Could not query table.');
+                }
+                if (empty($result['Items'])) {
+                    throw new Exception(sprintf("Could not find Supplier with name \"%s\"", $name));
+                }
+                $supplier = reset($result['Items']);
+                $partitionKey = $supplier['PK']['S'];
+                break;
+        }
+    }
+
+    if (empty($partitionKey)) {
+        throw new Exception('valid Partition Key has not been specified');
+    }
+
+    $result = $dynClient->query([
+        'KeyConditionExpression' => 'PK=:pk',
+        'ExpressionAttributeValues' => [
+            ':pk' => ['S' => $partitionKey],
+        ],
+        'TableName' => $tableName,
+    ]);
+    if (!$result instanceof Result) {
+        throw new Exception('Could not scan table.');
+    }
+
+    printf("Supplier[%s]\n", $partitionKey);
+    foreach ($result['Items'] as $item) {
+        foreach ($item as $key => $attribute) {
+            if ($key != 'PK') {
+                printf(" [%s]=>\"%s\"", $key, $attribute['S']);
+            }
+        }
+        echo "\n";
+    }
+} catch (Throwable $e) {
+    printf("An error occurred while querying the table: %s", $e->getMessage());
+    return 1;
+}

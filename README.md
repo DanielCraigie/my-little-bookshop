@@ -12,3 +12,23 @@ I currently intend to bolt on a Vue.js web App to provide an interactive front e
 - Learn how to integrate DynamoDB with PHP*
 
 *Project will probably be ported to GO to create a Lambda driven API Gateway infrastructure later.
+
+# Example Usage
+
+1. `./bin/createTable`
+2. `./bin/addSupplier`
+3. `./bin/scanTable`
+
+# Useful Queries
+
+Select all items for PK
+
+`aws dynamodb query --endpoint-url http://localhost:8000 --table-name bookshop --key-condition-expression "PK=:pk" --expression-attribute-values '{":pk":{"S":"supplier#9ae2b1d6-4541-47b2-a2b0-0c292e8d2a53"}}'`
+
+Generate list of suppliers
+
+`aws dynamodb query --endpoint-url http://localhost:8000 --table-name bookshop --index-name GSI1 --key-condition-expression "GSI1PK=:suppliers" --expression-attribute-values '{":suppliers":{"S":"suppliers"}}' --select SPECIFIC_ATTRIBUTES --projection-expression GSI1PK,GSI1SK,PK`
+
+Retrieve details for a specific supplier
+
+`aws dynamodb query --endpoint-url http://localhost:8000 --table-name bookshop --key-condition-expression "PK=:suppliers" --expression-attribute-values '{":suppliers":{"S":"supplier#9ae2b1d6-4541-47b2-a2b0-0c292e8d2a53"}}'`

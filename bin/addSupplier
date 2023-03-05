@@ -1,0 +1,109 @@
+#!/usr/bin/env php
+<?php
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\DynamoDb\DynamoDbClient;
+use AWS\Result;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+use Ramsey\Uuid\Uuid;
+
+/** @var DynamoDbClient $dynClient */
+/** @var string $tableName */
+
+try {
+    $table = new Table($dynClient, $tableName);
+    if (!$table->exists()) {
+        throw new Exception("Table[$tableName] does not exist.\n");
+    }
+
+    // create faker to provide data
+    $faker = Faker\Factory::create();
+    $faker->addProvider(new Faker\Provider\en_GB\Address($faker));
+    $faker->addProvider(new Faker\Provider\en_GB\PhoneNumber($faker));
+
+    /*
+     * Add supplier Name
+     */
+    $supplierPk = 'supplier#' . Uuid::uuid4()->toString();
+    $supplierName = $faker->company();
+    $addSupplierResult = $dynClient->putItem([
+        'Item' => [
+            'PK' => ['S' => $supplierPk],
+            'SK' => ['S' => 'name'],
+            'GSI1PK' => ['S' => 'suppliers'],
+            'GSI1SK' => ['S' => $supplierName],
+            'Name' => ['S' => $supplierName],
+        ],
+        'TableName' => $tableName,
+    ]);
+
+    if ($addSupplierResult instanceof Result) {
+        printf("Supplier \"%s\" Name added to [%s].\n", $supplierName, $tableName);
+    } else {
+        throw new Exception("Could not add \"$supplierName\" Name to [$tableName].");
+    }
+
+    /*
+     * Add supplier Address
+     */
+    $addAddressResult = $dynClient->putItem([
+        'Item' => [
+            'PK' => ['S' => $supplierPk],
+            'SK' => ['S' => 'address#' . Uuid::uuid4()->toString()],
+            'Details' => ['S' => json_encode([
+                'Street1' => ['S' => $faker->streetAddress()],
+                'City' => ['S' => $faker->city()],
+                'Postcode' => ['S' => $faker->postcode()],
+            ])],
+        ],
+        'TableName' => $tableName,
+    ]);
+
+    if ($addAddressResult instanceof Result) {
+        printf("Supplier \"%s\" Address added to [%s].\n", $supplierName, $tableName);
+    } else {
+        throw new Exception("Could not add \"$supplierName\" Address to [$tableName].");
+    }
+
+    /*
+     * Add supplier Phone
+     */
+    $emailResult = $dynClient->putItem([
+        'Item' => [
+            'PK' => ['S' => $supplierPk],
+            'SK' => ['S' => 'phone#' . Uuid::uuid4()->toString()],
+            'Value' => ['S' => $faker->phoneNumber()],
+        ],
+        'TableName' => $tableName,
+    ]);
+
+    if ($emailResult instanceof Result) {
+        printf("Supplier \"%s\" Phone Number added to [%s]", $supplierName, $tableName);
+    } else {
+        throw new Exception("Could not add \"$supplierName\" Phone Number to [$tableName].");
+    }
+
+    /*
+     * Add supplier Email
+     */
+    $emailResult = $dynClient->putItem([
+        'Item' => [
+            'PK' => ['S' => $supplierPk],
+            'SK' => ['S' => 'email#' . Uuid::uuid4()->toString()],
+            'Value' => ['S' => $faker->email()],
+        ],
+        'TableName' => $tableName,
+    ]);
+
+    if ($emailResult instanceof Result) {
+        printf("Supplier \"%s\" Email added to [%s]", $supplierName, $tableName);
+    } else {
+        throw new Exception("Could not add \"$supplierName\" Email to [$tableName].");
+    }
+
+    printf("Supplier \"%s\" created.\n", $supplierName);
+} catch (Throwable $e) {
+    printf("An error occurred while adding the Supplier: %s", $e->getMessage());
+    return 1;
+}

@@ -1,0 +1,53 @@
+#!/usr/bin/env php
+<?php
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\Result;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+
+/** @var DynamoDbClient $dynClient */
+/** @var string $tableName */
+
+try {
+    $table = new Table($dynClient, $tableName);
+
+    if (!$table->exists()) {
+        throw new Exception("Table[{$tableName}] doesn't exists.");
+    }
+
+    $resultTotal = 0;
+    $query = [
+        'IndexName' => 'GSI1',
+        'KeyConditionExpression' => 'GSI1PK=:val',
+        'ExpressionAttributeNames' => ['#name' => 'Name'],
+        'ExpressionAttributeValues' => [
+            ':val' => ['S' => 'suppliers'],
+        ],
+        'ProjectionExpression' => 'GSI1PK,PK,#name',
+        'TableName' => $tableName,
+    ];
+
+    do {
+        $result = $dynClient->query($query);
+        if (!$result instanceof Result) {
+            throw new Exception('Could not scan table.');
+        }
+
+        $resultTotal += $result['Count'];
+
+        foreach ($result['Items'] as $item) {
+            printf("[PK] => %s, [Name] => %s\n", $item['PK']['S'], $item['Name']['S']);
+        }
+
+        if (!empty($result['LastEvaluatedKey'])) {
+            $query['ExclusiveStartKey'] = $result['LastEvaluatedKey'];
+        }
+    } while (!empty($result['LastEvaluatedKey']));
+
+    printf("%d records found.\n", $resultTotal);
+} catch (Throwable $e) {
+    printf("An error occurred while querying the table: %s", $e->getMessage());
+    return 1;
+}

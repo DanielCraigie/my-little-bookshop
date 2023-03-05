@@ -1,0 +1,58 @@
+#!/usr/bin/env php
+<?php
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\Result;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+
+/** @var DynamoDbClient $dynClient */
+/** @var string $tableName */
+
+try {
+    $table = new Table($dynClient, $tableName);
+
+    if (!$table->exists()) {
+        throw new Exception("Table[{$tableName}] doesn't exists.");
+    }
+
+    $pk = $table->getPartitionKey();
+    $sk = $table->getSortKey();
+
+    $result = $dynClient->scan([
+        'ReturnConsumedCapacity' => 'TOTAL',
+        'TableName' => $tableName,
+    ]);
+    if (!$result instanceof Result) {
+        throw new Exception('Could not scan table.');
+    }
+
+    printf("%d items found.\n", $result['Count']);
+
+    foreach ($result['Items'] as $item) {
+        printf("[%s] => %s", $pk, $item[$pk]['S']);
+
+        if (!empty($sk)) {
+            printf(", [%s] => %s", $sk, $item[$sk]['S']);
+        }
+
+        foreach ($item as $key => $attribute) {
+            if (in_array($key, [$pk, $sk])) {
+                continue;
+            }
+
+            $value = reset($attribute);
+            printf(", [%s] => %s", $key, $value);
+        }
+
+        echo "\n";
+    }
+
+    if ($result['Count'] > 0) {
+        printf("Scan consumed %f Capacity Units\n", $result['ConsumedCapacity']['CapacityUnits']);
+    }
+} catch (Throwable $e) {
+    printf("An error occurred while scanning the table: %s", $e->getMessage());
+    return 1;
+}
