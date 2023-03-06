@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\DynamoDb\DynamoDbClient;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+use Danielcraigie\Bookshop\models\Supplier;
+
+/** @var DynamoDbClient $dynClient */
+/** @var string $tableName */
+
+try {
+    $table = new Table($dynClient, $tableName);
+    if (!$table->exists()) {
+        throw new Exception("Table[$tableName] does not exist.\n");
+    }
+
+    // create faker to provide data
+    $faker = Faker\Factory::create();
+    $faker->addProvider(new Faker\Provider\en_GB\Address($faker));
+    $faker->addProvider(new Faker\Provider\en_GB\PhoneNumber($faker));
+
+    /*
+     * Add supplier Name
+     */
+    $supplier = new Supplier($dynClient, $tableName);
+    $supplier->setName($faker->company());
+    $supplier->create();
+    $supplier->addAddress([
+        'Street1' => ['S' => $faker->streetAddress()],
+        'City' => ['S' => $faker->city()],
+        'Postcode' => ['S' => $faker->postcode()],
+    ]);
+    $supplier->addPhone($faker->phoneNumber());
+    $supplier->addEmail($faker->email());
+
+    printf("Supplier \"%s\" created.\n", $supplier->getName());
+} catch (Throwable $e) {
+    printf("An error occurred while adding the Supplier: %s", $e->getMessage());
+    return 1;
+}

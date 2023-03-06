@@ -21,11 +21,11 @@ try {
     $query = [
         'IndexName' => 'GSI1',
         'KeyConditionExpression' => 'GSI1PK=:val',
-        'ExpressionAttributeNames' => ['#name' => 'Name'],
+        'ExpressionAttributeNames' => ['#value' => 'Value'],
         'ExpressionAttributeValues' => [
             ':val' => ['S' => 'suppliers'],
         ],
-        'ProjectionExpression' => 'GSI1PK,PK,#name',
+        'ProjectionExpression' => 'GSI1PK,PK,#value',
         'TableName' => $tableName,
     ];
 
@@ -38,7 +38,7 @@ try {
         $resultTotal += $result['Count'];
 
         foreach ($result['Items'] as $item) {
-            printf("[PK] => %s, [Name] => %s\n", $item['PK']['S'], $item['Name']['S']);
+            printf("[PK] => %s, [Name] => %s\n", $item['PK']['S'], $item['Value']['S']);
         }
 
         if (!empty($result['LastEvaluatedKey'])) {
