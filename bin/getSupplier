@@ -8,11 +8,11 @@ getSupplier - provides details for a supplier Name/PK
 
 Options:
     -p, --partition-key
-    -n, --name
+    -n, --supplier-name
 
 Usage:
     getSupplier --partition-key <supplier PK>
-    getSupplier --name <supplier Name>
+    getSupplier --supplier-name <supplier Name>
     getSupplier --help
 
 <?php
@@ -21,21 +21,15 @@ endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\DynamoDb\DynamoDbClient;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 use Danielcraigie\Bookshop\models\Supplier;
 
-/** @var DynamoDbClient $dynClient */
-/** @var string $tableName */
-
 try {
     // verify table exists
-    $table = new Table($dynClient, $tableName);
-    if (!$table->exists()) {
-        throw new Exception("Table[{$tableName}] doesn't exists.");
-    }
+    $table = new Table();
+    $table->confirmExists();
 
-    $supplier = new Supplier($dynClient, $tableName);
+    $supplier = new Supplier();
 
     /*
      * Handle user arguments
@@ -47,15 +41,15 @@ try {
                 $supplier->loadFromPartitionKey($argv[++$i]);
                 break;
             case '-n':
-            case '--name':
+            case '--supplier-name':
                 // use supplier name search text to locate first match
                 $supplier->loadFromName($argv[++$i]);
                 break;
         }
     }
 
-    if (empty($supplier->getPartitionKey())) {
-        throw new Exception('valid Partition Key has not been specified');
+    if ($supplier->isNewModel()) {
+        throw new Exception('Supplier could not be found.');
     }
 
     printf("Supplier[%s]\n", $supplier->getPartitionKey());

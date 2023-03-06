@@ -2,33 +2,19 @@
 
 namespace Danielcraigie\Bookshop\models;
 
-use Aws\DynamoDb\DynamoDbClient;
 use Ramsey\Uuid\Uuid;
 
 abstract class AbstractModel
 {
-    private DynamoDbClient $dynamoDbClient;
-
-    private string $tableName;
-
     private string $partitionKey;
 
-    public function __construct(DynamoDbClient $dynamoDbClient, string $tableName)
+    private bool $newModel = true;
+
+    public function __construct()
     {
-        $this->dynamoDbClient = $dynamoDbClient;
-        $this->tableName = $tableName;
+        // auto generate PartitionKey for new Objects
         $classPath = explode('\\', get_class($this));
         $this->partitionKey = sprintf('%s#%s', mb_strtolower(end($classPath)), Uuid::uuid4()->toString());
-    }
-
-    protected function getDynamoDbClient():DynamoDbClient
-    {
-        return $this->dynamoDbClient;
-    }
-
-    protected function getTableName():string
-    {
-        return $this->tableName;
     }
 
     public function getPartitionKey():string
@@ -39,5 +25,11 @@ abstract class AbstractModel
     protected function setPartitionKey(string $pk):void
     {
         $this->partitionKey = $pk;
+        $this->newModel = false;
+    }
+
+    public function isNewModel():bool
+    {
+        return $this->newModel;
     }
 }

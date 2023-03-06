@@ -3,18 +3,12 @@
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\DynamoDb\DynamoDbClient;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 use Danielcraigie\Bookshop\models\Supplier;
 
-/** @var DynamoDbClient $dynClient */
-/** @var string $tableName */
-
 try {
-    $table = new Table($dynClient, $tableName);
-    if (!$table->exists()) {
-        throw new Exception("Table[$tableName] does not exist.\n");
-    }
+    $table = new Table();
+    $table->confirmExists();
 
     // create faker to provide data
     $faker = Faker\Factory::create();
@@ -24,7 +18,7 @@ try {
     /*
      * Add supplier Name
      */
-    $supplier = new Supplier($dynClient, $tableName);
+    $supplier = new Supplier();
     $supplier->setName($faker->company());
     $supplier->create();
     $supplier->addAddress([

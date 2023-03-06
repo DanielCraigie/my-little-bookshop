@@ -3,6 +3,7 @@
 namespace Danielcraigie\Bookshop\models;
 
 use Aws\Result;
+use Danielcraigie\Bookshop\AWS\AWS;
 use Danielcraigie\Bookshop\models\attributes\Address;
 use Danielcraigie\Bookshop\models\attributes\Email;
 use Danielcraigie\Bookshop\models\attributes\Phone;
@@ -39,14 +40,14 @@ class Supplier extends AbstractModel
      */
     public function loadFromName(string $name):void
     {
-        $result = $this->getDynamoDbClient()->query([
+        $result = AWS::DynamoDB()->query([
             'IndexName' => 'GSI1',
             'KeyConditionExpression' => 'GSI1PK=:pk AND begins_with(GSI1SK, :sk)',
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => 'suppliers'],
                 ':sk' => ['S' => $name],
             ],
-            'TableName' => $this->getTableName(),
+            'TableName' => $_ENV['TABLE_NAME'],
         ]);
 
         if (!$result instanceof Result) {
@@ -58,6 +59,11 @@ class Supplier extends AbstractModel
         }
 
         $supplier = reset($result['Items']);
+
+        if (empty($supplier)) {
+            throw new Exception(sprintf("Supplier \"%s\" could not be found.", $name));
+        }
+
         $this->setPartitionKey($supplier['PK']['S']);
         $this->setName($supplier['Value']['S']);
     }
@@ -69,7 +75,7 @@ class Supplier extends AbstractModel
      */
     public function loadFromPartitionKey(string $partitionKey):void
     {
-        $result = $this->getDynamoDbClient()->query([
+        $result = AWS::DynamoDB()->query([
             'KeyConditionExpression' => 'PK=:pk AND SK=:sk',
             'ExpressionAttributeNames' => ['#value' => 'Value'],
             'ExpressionAttributeValues' => [
@@ -77,7 +83,7 @@ class Supplier extends AbstractModel
                 ':sk' => ['S' => 'name'],
             ],
             'ProjectionExpression' => 'PK,#value',
-            'TableName' => $this->getTableName(),
+            'TableName' => $_ENV['TABLE_NAME'],
         ]);
 
         if (!$result instanceof Result) {
@@ -85,10 +91,20 @@ class Supplier extends AbstractModel
         }
 
         $supplier = reset($result['Items']);
+
+        if (empty($supplier)) {
+            throw new Exception(sprintf("Supplier with Partition Key \"%s\" could not be found.", $partitionKey));
+        }
+
         $this->setPartitionKey($supplier['PK']['S']);
         $this->setName($supplier['Value']['S']);
     }
 
+    /**
+     * @param string $sortKey
+     * @return array
+     * @throws Exception
+     */
     public function getData(string $sortKey = ''):array
     {
         $query = [
@@ -96,7 +112,7 @@ class Supplier extends AbstractModel
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => $this->getPartitionKey()],
             ],
-            'TableName' => $this->getTableName(),
+            'TableName' => $_ENV['TABLE_NAME'],
         ];
 
         if (!empty($sortKey)) {
@@ -104,7 +120,7 @@ class Supplier extends AbstractModel
             $query['ExpressionAttributeValues'][':sk'] = ['S' => $sortKey];
         }
 
-        $result = $this->getDynamoDbClient()->query($query);
+        $result = AWS::DynamoDB()->query($query);
 
         if (!$result instanceof Result) {
             throw new Exception('Could not scan table.');
@@ -119,7 +135,7 @@ class Supplier extends AbstractModel
      */
     public function create():void
     {
-        $result =  $this->getDynamoDbClient()->putItem([
+        $result =  AWS::DynamoDB()->putItem([
             'Item' => [
                 'PK' => ['S' => $this->getPartitionKey()],
                 'SK' => ['S' => 'name'],
@@ -127,13 +143,13 @@ class Supplier extends AbstractModel
                 'GSI1SK' => ['S' => $this->getName()],
                 'Value' => ['S' => $this->getName()],
             ],
-            'TableName' => $this->getTableName(),
+            'TableName' => $_ENV['TABLE_NAME'],
         ]);
 
         if ($result instanceof Result) {
-            printf("Supplier \"%s\" Name added to [%s].\n", $this->getName(), $this->getTableName());
+            printf("Supplier \"%s\" Name added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
         } else {
-            throw new Exception(sprintf("Could not add \"%s\" to [%s].", $this->getName(), $this->getTableName()));
+            throw new Exception(sprintf("Could not add \"%s\" to [%s].", $this->getName(), $_ENV['TABLE_NAME']));
         }
     }
 
@@ -144,9 +160,9 @@ class Supplier extends AbstractModel
      */
     public function addAddress(array $newAddress):void
     {
-        $addressModel = new Address($this->getDynamoDbClient(), $this->getTableName());
+        $addressModel = new Address();
         $addressModel->create($this->getPartitionKey(), $newAddress);
-        printf("Supplier \"%s\" Address added to [%s].\n", $this->getName(), $this->getTableName());
+        printf("Supplier \"%s\" Address added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
     }
 
     /**
@@ -156,9 +172,9 @@ class Supplier extends AbstractModel
      */
     public function addPhone(string $newPhone):void
     {
-        $phoneModel = new Phone($this->getDynamoDbClient(), $this->getTableName());
+        $phoneModel = new Phone();
         $phoneModel->create($this->getPartitionKey(), $newPhone);
-        printf("Supplier \"%s\" Phone Number added to [%s].\n", $this->getName(), $this->getTableName());
+        printf("Supplier \"%s\" Phone Number added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
     }
 
     /**
@@ -168,8 +184,8 @@ class Supplier extends AbstractModel
      */
     public function addEmail(string $newEmail):void
     {
-        $emailModel = new Email($this->getDynamoDbClient(), $this->getTableName());
+        $emailModel = new Email();
         $emailModel->create($this->getPartitionKey(), $newEmail);
-        printf("Supplier \"%s\" Email added to [%s].\n", $this->getName(), $this->getTableName());
+        printf("Supplier \"%s\" Email added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
     }
 }

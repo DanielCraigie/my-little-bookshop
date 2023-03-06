@@ -3,21 +3,15 @@
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\DynamoDb\DynamoDbClient;
+use Danielcraigie\Bookshop\AWS\AWS;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 
-/** @var DynamoDbClient $dynClient */
-/** @var string $tableName */
-
 try {
-    $table = new Table($dynClient, $tableName);
+    $table = new Table();
+    $table->confirmExists();
 
-    if ($table->exists()) {
-        $response = $dynClient->deleteTable(['TableName' => $tableName]);
-        echo "Deleting table \"{$response['TableDescription']['TableName']}\" with {$response['TableDescription']['ItemCount']} records\n";
-    } else {
-        throw new Exception('Table[' . $tableName . '] not found.');
-    }
+    $response = AWS::DynamoDB()->deleteTable(['TableName' => $_ENV['TABLE_NAME']]);
+    printf("Deleting table \"%s\" with %d records\n", $response['TableDescription']['TableName'], $response['TableDescription']['ItemCount']);
 } catch (Exception $e) {
     echo "An error occurred while deleting the table: {$e->getMessage()}";
     return 1;

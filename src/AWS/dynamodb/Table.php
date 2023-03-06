@@ -4,22 +4,13 @@ namespace Danielcraigie\Bookshop\AWS\dynamodb;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\Result;
+use Danielcraigie\Bookshop\AWS\AWS;
 use Exception;
 
 class Table
 {
     /**
-     * @var DynamoDbClient $dynamoDbClient
-     */
-    private DynamoDbClient $dynamoDbClient;
-
-    /**
-     * @var string $tableName
-     */
-    private string $tableName;
-
-    /**
-     * @var Result $tableDescription
+     * @var Result|null $tableDescription
      */
     private Result|null $tableDescription = null;
 
@@ -28,14 +19,11 @@ class Table
      * @param string $tableName
      * @throws Exception
      */
-    public function __construct(DynamoDbClient $dynamoDbClient, string $tableName)
+    public function __construct()
     {
-        if (empty($tableName)) {
-            throw new Exception('You must provide a table name.');
+        if (empty($_ENV['TABLE_NAME'])) {
+            throw new Exception('Table name has not been defined.');
         }
-
-        $this->dynamoDbClient = $dynamoDbClient;
-        $this->tableName = $tableName;
     }
 
     /**
@@ -44,13 +32,35 @@ class Table
      */
     public function exists():bool
     {
-        $result = $this->dynamoDbClient->listTables();
+        $result = AWS::DynamoDB()->listTables();
 
         if (!$result instanceof Result) {
             throw new Exception('An error occurred when performing table lookup.');
         }
 
-        return in_array($this->tableName, $result['TableNames']);
+        return in_array($_ENV['TABLE_NAME'], $result['TableNames']);
+    }
+
+    /**
+     * @return void
+     * @throws Exception
+     */
+    public function confirmExists():void
+    {
+        if (!$this->exists()) {
+            throw new Exception(sprintf("Table[%s] does not exist.\n", $_ENV['TABLE_NAME']));
+        }
+    }
+
+    /**
+     * @return void
+     * @throws Exception
+     */
+    public function confirmNotExists():void
+    {
+        if ($this->exists()) {
+            throw new Exception(sprintf("Table[%s] not found.", $_ENV['TABLE_NAME']));
+        }
     }
 
     /**
@@ -60,7 +70,7 @@ class Table
     private function getTableDescription():Result
     {
         if (!$this->tableDescription instanceof Result) {
-            $description = $this->dynamoDbClient->describeTable(['TableName' => $this->tableName]);
+            $description = AWS::DynamoDB()->describeTable(['TableName' => $_ENV['TABLE_NAME']]);
 
             if (!$description instanceof Result) {
                 throw new Exception('An error occurred when trying to get Table Description.');

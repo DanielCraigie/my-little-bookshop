@@ -3,26 +3,20 @@
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\DynamoDb\DynamoDbClient;
 use Aws\Result;
+use Danielcraigie\Bookshop\AWS\AWS;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 
-/** @var DynamoDbClient $dynClient */
-/** @var string $tableName */
-
 try {
-    $table = new Table($dynClient, $tableName);
-
-    if (!$table->exists()) {
-        throw new Exception("Table[{$tableName}] doesn't exists.");
-    }
+    $table = new Table();
+    $table->confirmExists();
 
     $pk = $table->getPartitionKey();
     $sk = $table->getSortKey();
 
-    $result = $dynClient->scan([
+    $result = AWS::DynamoDB()->scan([
         'ReturnConsumedCapacity' => 'TOTAL',
-        'TableName' => $tableName,
+        'TableName' => $_ENV['TABLE_NAME'],
     ]);
     if (!$result instanceof Result) {
         throw new Exception('Could not scan table.');

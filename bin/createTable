@@ -3,21 +3,14 @@
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\DynamoDb\DynamoDbClient;
+use Danielcraigie\Bookshop\AWS\AWS;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 
-/** @var DynamoDbClient $dynClient */
-/** @var string $tableName */
-
 try {
-    $table = new Table($dynClient, $tableName);
+    $table = new Table();
+    $table->confirmNotExists();
 
-    if ($table->exists()) {
-        echo "Table[{$tableName}] already exists.\n";
-        return 0;
-    }
-
-    $result = $dynClient->createTable([
+    $result = AWS::DynamoDB()->createTable([
         'AttributeDefinitions' => [
             [
                 'AttributeName' => 'PK',
@@ -72,14 +65,14 @@ try {
             'ReadCapacityUnits' => 1,
             'WriteCapacityUnits' => 1,
         ],
-        'TableName' => $tableName,
+        'TableName' => $_ENV['TABLE_NAME'],
     ]);
 
     if ($result['TableDescription']['TableStatus'] != 'ACTIVE') {
-        throw new Exception('Table: ' . $tableName . ' could not be created.');
+        throw new Exception('Table: ' . $_ENV['TABLE_NAME'] . ' could not be created.');
     }
 
-    echo "Table[{$tableName}] created.\n";
+    echo "Table[{$_ENV['TABLE_NAME']}] created.\n";
 } catch (Throwable $e) {
     echo "An error occurred while creating the table: {$e->getMessage()}";
     return 1;

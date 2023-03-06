@@ -3,19 +3,13 @@
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\DynamoDb\DynamoDbClient;
 use Aws\Result;
+use Danielcraigie\Bookshop\AWS\AWS;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 
-/** @var DynamoDbClient $dynClient */
-/** @var string $tableName */
-
 try {
-    $table = new Table($dynClient, $tableName);
-
-    if (!$table->exists()) {
-        throw new Exception("Table[{$tableName}] doesn't exists.");
-    }
+    $table = new Table();
+    $table->confirmExists();
 
     $resultTotal = 0;
     $query = [
@@ -26,11 +20,11 @@ try {
             ':val' => ['S' => 'suppliers'],
         ],
         'ProjectionExpression' => 'GSI1PK,PK,#value',
-        'TableName' => $tableName,
+        'TableName' => $_ENV['TABLE_NAME'],
     ];
 
     do {
-        $result = $dynClient->query($query);
+        $result = AWS::DynamoDB()->query($query);
         if (!$result instanceof Result) {
             throw new Exception('Could not scan table.');
         }
