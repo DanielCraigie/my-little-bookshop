@@ -3,14 +3,14 @@
   "ModelMetadata": {
     "Author": "Daniel Craigie",
     "DateCreated": "May 20, 2022, 10:05 AM",
-    "DateLastModified": "Feb 25, 2023, 09:11 PM",
+    "DateLastModified": "Mar 05, 2023, 10:19 PM",
     "Description": "Bookshop data model",
     "AWSService": "Amazon DynamoDB",
     "Version": "3.0"
   },
   "DataModel": [
     {
-      "TableName": "Bookshop_Table",
+      "TableName": "Bookshop",
       "KeyAttributes": {
         "PartitionKey": {
           "AttributeName": "PK",
@@ -23,10 +23,6 @@
       },
       "NonKeyAttributes": [
         {
-          "AttributeName": "EntityType",
-          "AttributeType": "S"
-        },
-        {
           "AttributeName": "Value",
           "AttributeType": "S"
         },
@@ -35,27 +31,35 @@
           "AttributeType": "M"
         },
         {
-          "AttributeName": "Price",
-          "AttributeType": "S"
-        },
-        {
-          "AttributeName": "Quantity",
-          "AttributeType": "S"
-        },
-        {
-          "AttributeName": "Address",
-          "AttributeType": "M"
-        },
-        {
           "AttributeName": "Type",
           "AttributeType": "S"
         },
         {
-          "AttributeName": "GSI1-PK",
+          "AttributeName": "Price",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "Quantity",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "Total",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "StartDate",
           "AttributeType": "S"
         },
         {
-          "AttributeName": "GSI1-SK",
+          "AttributeName": "EndDate",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1SK",
           "AttributeType": "S"
         }
       ],
@@ -64,11 +68,11 @@
           "IndexName": "GSI1",
           "KeyAttributes": {
             "PartitionKey": {
-              "AttributeName": "GSI1-PK",
+              "AttributeName": "GSI1PK",
               "AttributeType": "S"
             },
             "SortKey": {
-              "AttributeName": "GSI1-SK",
+              "AttributeName": "GSI1SK",
               "AttributeType": "S"
             }
           },
@@ -83,14 +87,11 @@
             "S": "book#0-434-02110-5"
           },
           "SK": {
-            "S": "book#0-434-02110-5"
-          },
-          "EntityType": {
-            "S": "book"
+            "S": "details"
           },
           "Details": {
             "M": {
-              "Tag line": {
+              "TagLine": {
                 "S": "The Making of the British Intelligence Community"
               },
               "Format": {
@@ -99,10 +100,10 @@
             }
           },
           "Price": {
-            "S": "£14.00"
+            "N": "14.0"
           },
           "Quantity": {
-            "S": "5"
+            "N": "5"
           }
         },
         {
@@ -110,80 +111,79 @@
             "S": "book#0-434-02110-5"
           },
           "SK": {
-            "S": "title#1"
+            "S": "author#1"
           },
-          "EntityType": {
+          "GSI1PK": {
+            "S": "author#1"
+          },
+          "GSI1SK": {
+            "S": "book#0-434-02110-5"
+          }
+        },
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
+            "S": "genre#1"
+          },
+          "GSI1PK": {
+            "S": "genre#1"
+          },
+          "GSI1SK": {
+            "S": "book#0-434-02110-5"
+          }
+        },
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
+            "S": "publisher#1"
+          },
+          "GSI1PK": {
+            "S": "publisher#1"
+          },
+          "GSI1SK": {
+            "S": "book#0-434-02110-5"
+          }
+        },
+        {
+          "PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "SK": {
             "S": "title"
           },
           "Value": {
+            "S": "Secret Service"
+          },
+          "GSI1PK": {
+            "S": "titles"
+          },
+          "GSI1SK": {
             "S": "Secret Service"
           }
         },
         {
           "PK": {
-            "S": "book#0-434-02110-5"
-          },
-          "SK": {
             "S": "author#1"
           },
-          "EntityType": {
-            "S": "author"
+          "SK": {
+            "S": "name"
           },
           "Value": {
             "S": "Christopher Andrew"
-          },
-          "GSI1-PK": {
-            "S": "author#1"
-          },
-          "GSI1-SK": {
-            "S": "book#0-434-02110-5"
           }
         },
         {
           "PK": {
-            "S": "author#1"
-          },
-          "SK": {
-            "S": "Christopher Andrew"
-          },
-          "GSI1-PK": {
-            "S": "authors"
-          },
-          "GSI1-SK": {
-            "S": "Christopher Andrew"
-          }
-        },
-        {
-          "PK": {
-            "S": "book#0-434-02110-5"
-          },
-          "SK": {
             "S": "genre#1"
           },
-          "EntityType": {
-            "S": "genre"
+          "SK": {
+            "S": "name"
           },
           "Value": {
-            "S": "History"
-          },
-          "GSI1-PK": {
-            "S": "genre#1"
-          },
-          "GSI1-SK": {
-            "S": "book#0-434-02110-5"
-          }
-        },
-        {
-          "PK": {
-            "S": "genre#1"
-          },
-          "SK": {
-            "S": "History"
-          },
-          "GSI1-PK": {
-            "S": "genres"
-          },
-          "GSI1-SK": {
             "S": "History"
           }
         },
@@ -192,33 +192,16 @@
             "S": "publisher#1"
           },
           "SK": {
+            "S": "name"
+          },
+          "Value": {
             "S": "Heinemann - London"
           },
-          "GSI1-PK": {
+          "GSI1PK": {
             "S": "publishers"
           },
-          "GSI1-SK": {
+          "GSI1SK": {
             "S": "Heinemann - London"
-          }
-        },
-        {
-          "PK": {
-            "S": "book#0-434-02110-5"
-          },
-          "SK": {
-            "S": "publisher#1"
-          },
-          "EntityType": {
-            "S": "publisher"
-          },
-          "Value": {
-            "S": "Heinemann - London"
-          },
-          "GSI1-PK": {
-            "S": "publisher#1"
-          },
-          "GSI1-SK": {
-            "S": "book#0-434-02110-5"
           }
         },
         {
@@ -231,10 +214,10 @@
           "Value": {
             "S": "Bob Smith"
           },
-          "GSI1-PK": {
+          "GSI1PK": {
             "S": "customers"
           },
-          "GSI1-SK": {
+          "GSI1SK": {
             "S": "Bob Smith"
           }
         },
@@ -244,9 +227,6 @@
           },
           "SK": {
             "S": "address#1"
-          },
-          "EntityType": {
-            "S": "address"
           },
           "Details": {
             "M": {
@@ -263,6 +243,9 @@
                 "S": "RG12 7WJ"
               }
             }
+          },
+          "Type": {
+            "S": "Home"
           }
         },
         {
@@ -271,9 +254,6 @@
           },
           "SK": {
             "S": "email#1"
-          },
-          "EntityType": {
-            "S": "email"
           },
           "Value": {
             "S": "bob.smith@aol.com"
@@ -286,14 +266,8 @@
           "SK": {
             "S": "phone#1"
           },
-          "EntityType": {
-            "S": "phone"
-          },
           "Value": {
-            "S": "01344484122"
-          },
-          "Type": {
-            "S": "Home"
+            "S": "+441344484122"
           }
         },
         {
@@ -301,35 +275,23 @@
             "S": "sale#1"
           },
           "SK": {
-            "S": "sale"
-          },
-          "EntityType": {
-            "S": "sale"
+            "S": "details"
           },
           "Details": {
             "M": {
-              "Date": {
-                "S": "2022-05-10"
-              },
-              "Date Shipped": {
-                "S": "NULL"
-              },
-              "Total": {
-                "S": "£14.00"
-              },
               "Discount": {
-                "S": "£0.00"
+                "N": 0
               },
               "Shipping": {
-                "S": "£0.00"
+                "N": 0
               }
             }
           },
-          "GSI1-PK": {
-            "S": "2022-05-10"
+          "Total": {
+            "N": "14.0"
           },
-          "GSI1-SK": {
-            "S": "sale#1"
+          "StartDate": {
+            "S": "2023-01-03T17:23:24+00:00"
           }
         },
         {
@@ -339,16 +301,10 @@
           "SK": {
             "S": "customer#1"
           },
-          "EntityType": {
-            "S": "customer"
-          },
-          "Value": {
-            "S": "Bob Smith"
-          },
-          "GSI1-PK": {
+          "GSI1PK": {
             "S": "customer#1"
           },
-          "GSI1-SK": {
+          "GSI1SK": {
             "S": "sale#1"
           }
         },
@@ -358,9 +314,6 @@
           },
           "SK": {
             "S": "address#1"
-          },
-          "EntityType": {
-            "S": "address"
           },
           "Details": {
             "M": {
@@ -377,6 +330,9 @@
                 "S": "RG12 7WJ"
               }
             }
+          },
+          "Type": {
+            "S": "Delivery"
           }
         },
         {
@@ -386,75 +342,42 @@
           "SK": {
             "S": "book#0-434-02110-5"
           },
-          "EntityType": {
-            "S": "title"
-          },
           "Value": {
             "S": "Secret Service"
           },
           "Price": {
-            "S": "£14.00"
-          },
-          "GSI1-PK": {
-            "S": "book#0-434-02110-5"
-          },
-          "GSI1-SK": {
-            "S": "sale#1"
-          }
-        },
-        {
-          "PK": {
-            "S": "order#1"
-          },
-          "SK": {
-            "S": "order"
-          },
-          "EntityType": {
-            "S": "order"
-          },
-          "Details": {
-            "M": {
-              "Order Date": {
-                "S": "2022-02-22"
-              },
-              "Total Cost": {
-                "S": "£14.00"
-              },
-              "Date Received": {
-                "S": "2022-03-01"
-              }
-            }
-          },
-          "GSI1-PK": {
-            "S": "2022-02-22"
-          },
-          "GSI1-SK": {
-            "S": "order#1"
-          }
-        },
-        {
-          "PK": {
-            "S": "order#1"
-          },
-          "SK": {
-            "S": "book#0-434-02110-5"
-          },
-          "EntityType": {
-            "S": "title"
-          },
-          "Value": {
-            "S": "Secret Service"
-          },
-          "Price": {
-            "S": "£14.00"
+            "N": "14.0"
           },
           "Quantity": {
-            "S": "1"
+            "N": "1"
           },
-          "GSI1-PK": {
+          "GSI1PK": {
             "S": "book#0-434-02110-5"
           },
-          "GSI1-SK": {
+          "GSI1SK": {
+            "S": "sale#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "order#1"
+          },
+          "SK": {
+            "S": "details"
+          },
+          "Total": {
+            "N": "14.0"
+          },
+          "StartDate": {
+            "S": "2022-02-22T13:14:15+00:00"
+          },
+          "EndDate": {
+            "S": "2022-03-01T15:14:13+00:00"
+          },
+          "GSI1PK": {
+            "S": "2022-02-22"
+          },
+          "GSI1SK": {
             "S": "order#1"
           }
         },
@@ -465,16 +388,33 @@
           "SK": {
             "S": "supplier#1"
           },
-          "EntityType": {
-            "S": "supplier"
-          },
-          "Value": {
-            "S": "Bob's Books"
-          },
-          "GSI1-PK": {
+          "GSI1PK": {
             "S": "supplier#1"
           },
-          "GSI1-SK": {
+          "GSI1SK": {
+            "S": "order#1"
+          }
+        },
+        {
+          "PK": {
+            "S": "order#1"
+          },
+          "SK": {
+            "S": "book#0-434-02110-5"
+          },
+          "Value": {
+            "S": "Secret Service"
+          },
+          "Price": {
+            "N": "14.0"
+          },
+          "Quantity": {
+            "N": "1"
+          },
+          "GSI1PK": {
+            "S": "book#0-434-02110-5"
+          },
+          "GSI1SK": {
             "S": "order#1"
           }
         },
@@ -485,16 +425,13 @@
           "SK": {
             "S": "name"
           },
-          "EntityType": {
-            "S": "supplier"
-          },
           "Value": {
             "S": "Bob's Books"
           },
-          "GSI1-PK": {
+          "GSI1PK": {
             "S": "suppliers"
           },
-          "GSI1-SK": {
+          "GSI1SK": {
             "S": "Bob's Books"
           }
         },
@@ -504,9 +441,6 @@
           },
           "SK": {
             "S": "address#1"
-          },
-          "EntityType": {
-            "S": "address"
           },
           "Details": {
             "M": {
@@ -523,6 +457,9 @@
                 "S": "RG12 7WJ"
               }
             }
+          },
+          "Type": {
+            "S": "Work"
           }
         },
         {
@@ -532,25 +469,8 @@
           "SK": {
             "S": "email#1"
           },
-          "EntityType": {
-            "S": "email"
-          },
           "Value": {
-            "S": "sales@bobs-books.net"
-          }
-        },
-        {
-          "PK": {
-            "S": "suppler#1"
-          },
-          "SK": {
-            "S": "phone#1"
-          },
-          "EntityType": {
-            "S": "phone"
-          },
-          "Value": {
-            "S": "0126346353"
+            "S": "bob@bob.bob"
           },
           "Type": {
             "S": "Work"
@@ -558,16 +478,16 @@
         },
         {
           "PK": {
-            "S": "title#1"
+            "S": "supplier#1"
           },
           "SK": {
-            "S": "Secret Service"
+            "S": "phone#1"
           },
-          "GSI1-PK": {
-            "S": "titles"
+          "Value": {
+            "S": "+441344484122"
           },
-          "GSI1-SK": {
-            "S": "Secret Service"
+          "Type": {
+            "S": "Work"
           }
         }
       ],
