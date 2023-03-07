@@ -1,0 +1,78 @@
+#!/usr/bin/env php
+<?php
+
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+    || count($argv) == 1
+):?>
+createOrder - updates an existing Order.
+
+Options:
+    -p, --order-partition-key   Partition Key of Order to be updated
+    -b, --books                 JSON array of book records (must contain ISBN, Title, Price & Quantity)
+    -h, --help                  Show this help
+
+Usage:
+    createOrder --order-partition-key <order PK> --data <JSON Array>
+    createOrder --help
+
+<?php
+exit;
+endif;
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+use Danielcraigie\Bookshop\models\Order;
+
+try {
+    $table = new Table();
+    $table->confirmExists();
+
+    $order = new Order();
+    $books = [];
+
+    /*
+     * Handle user arguments
+     */
+    for ($i = 1; $i < $argc; $i++) {
+        switch ($argv[$i]) {
+            case '-p':
+            case '--order-partition-key':
+                // use supplier name search text to locate first match
+                $order->loadFromPartitionKey($argv[++$i]);
+                break;
+            case '-b':
+            case '--books':
+                $books = json_decode($argv[++$i]);
+                break;
+        }
+    }
+
+    if ($order->isNewModel()) {
+        throw new Exception('Order could not be found.');
+    }
+
+    if (empty($books)) {
+        throw new Exception('Invalid book list provided.');
+    }
+
+    foreach ($books as $book) {
+        if (empty($book->ISBN)
+            || empty($book->Title)
+            || empty($book->Price)
+            || empty($book->Quantity)
+        ) {
+            throw new Exception('Invalid book specification, each book must have: ISBN, Title, Price & Quantity');
+        }
+    }
+
+    foreach ($books as $book) {
+        $order->addBook($book->ISBN, $book->Title, $book->Price, $book->Quantity);
+    }
+
+    printf("Order[%s] has been updated.\n", $order->getPartitionKey());
+} catch (Throwable $e) {
+    printf("An error occurred while trying tu update the Order: %s", $e->getMessage());
+    return 1;
+}

@@ -26,13 +26,13 @@ try {
     do {
         $result = AWS::DynamoDB()->query($query);
         if (!$result instanceof Result) {
-            throw new Exception('Could not scan table.');
+            throw new Exception('Could not query table.');
         }
 
         $resultTotal += $result['Count'];
 
         foreach ($result['Items'] as $item) {
-            printf("[PK] => %s, [Name] => %s\n", $item['PK']['S'], $item['Value']['S']);
+            printf("[PK] => %s, [Name] => \"%s\"\n", $item['PK']['S'], $item['Value']['S']);
         }
 
         if (!empty($result['LastEvaluatedKey'])) {

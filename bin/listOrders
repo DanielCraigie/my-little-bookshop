@@ -1,0 +1,69 @@
+#!/usr/bin/env php
+<?php
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\Result;
+use Danielcraigie\Bookshop\AWS\AWS;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+
+try {
+    $table = new Table();
+    $table->confirmExists();
+
+    $resultTotal = 0;
+    $query = [
+        'IndexName' => 'GSI1',
+        'KeyConditionExpression' => 'GSI1PK=:val AND begins_with(GSI1SK, :filter)',
+        'ExpressionAttributeValues' => [
+            ':val' => ['S' => 'orders'],
+            ':filter' => ['S' => 'order#'],
+        ],
+        'TableName' => $_ENV['TABLE_NAME'],
+    ];
+
+    do {
+        $result = AWS::DynamoDB()->query($query);
+
+        if (!$result instanceof Result) {
+            throw new Exception('Could not query table.');
+        }
+
+        $resultTotal += $result['Count'];
+
+        $suppliers = [];
+        foreach ($result['Items'] as $item) {
+            $orderPK = $item['PK']['S'];
+
+            $orderSupplier = AWS::DynamoDB()->query([
+                'ExpressionAttributeNames' => [
+                    '#value' => 'Value',
+                ],
+                'ExpressionAttributeValues' => [
+                    ':pk' => ['S' => $orderPK],
+                    ':sk' => ['S' => 'supplier#'],
+                ],
+                'KeyConditionExpression' => 'PK=:pk AND begins_with(SK,:sk)',
+                'ProjectionExpression' => '#value',
+                'TableName' => $_ENV['TABLE_NAME'],
+            ]);
+
+            if (!$orderSupplier instanceof Result) {
+                throw new Exception('Unable to query table for Order Supplier.');
+            }
+
+            $supplier = reset($orderSupplier['Items']);
+
+            printf("[PK] => %s, [Supplier] => \"%s\", [Date] => %s\n", $orderPK, $supplier['Value']['S'], (new DateTime($item['StartDate']['S']))->format('Y-m-d'));
+        }
+
+        if (!empty($result['LastEvaluatedKey'])) {
+            $query['ExclusiveStartKey'] = $result['LastEvaluatedKey'];
+        }
+    } while (!empty($result['LastEvaluatedKey']));
+
+    printf("%d records found.\n", $resultTotal);
+} catch (Throwable $e) {
+    printf("An error occurred while querying the table: %s", $e->getMessage());
+    return 1;
+}

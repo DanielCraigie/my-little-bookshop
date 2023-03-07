@@ -1,0 +1,62 @@
+#!/usr/bin/env php
+<?php
+
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+    || count($argv) == 1
+):?>
+createOrder - creates a new Order from a given supplier.
+
+Options:
+    -n, --supplier-name     Name of Supplier (must already exist in DB)
+    -h, --help              Show this help
+
+Usage:
+    createOrder --supplier-name <supplier Name>
+    createOrder --help
+
+<?php
+exit;
+endif;
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+use Danielcraigie\Bookshop\models\Order;
+use Danielcraigie\Bookshop\models\Supplier;
+
+try {
+    $table = new Table();
+    $table->confirmExists();
+
+    $supplier = new Supplier();
+
+    /*
+     * Handle user arguments
+     */
+    for ($i = 1; $i < $argc; $i++) {
+        switch ($argv[$i]) {
+            case '-n':
+            case '--supplier-name':
+                // use supplier name search text to locate first match
+                $supplier->loadFromName($argv[++$i]);
+                break;
+        }
+    }
+
+    if ($supplier->isNewModel()) {
+        throw new Exception('Supplier could not be found.');
+    }
+
+    /*
+     * create new order
+     */
+    $order = new Order();
+    $order->setStartDate(new DateTime('now'));
+    $order->create($supplier);
+
+    printf("Order[%s] from \"%s\" created.\n", $order->getPartitionKey(), $supplier->getName());
+} catch (Throwable $e) {
+    printf("An error occurred while adding the Supplier: %s", $e->getMessage());
+    return 1;
+}
