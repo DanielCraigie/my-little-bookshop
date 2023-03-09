@@ -101,35 +101,6 @@ class Supplier extends AbstractModel
     }
 
     /**
-     * @param string $sortKey
-     * @return array
-     * @throws Exception
-     */
-    public function getData(string $sortKey = ''):array
-    {
-        $query = [
-            'KeyConditionExpression' => 'PK=:pk',
-            'ExpressionAttributeValues' => [
-                ':pk' => ['S' => $this->getPartitionKey()],
-            ],
-            'TableName' => $_ENV['TABLE_NAME'],
-        ];
-
-        if (!empty($sortKey)) {
-            $query['KeyConditionExpression'] .= ' AND begins_with(SK, :sk)';
-            $query['ExpressionAttributeValues'][':sk'] = ['S' => $sortKey];
-        }
-
-        $result = AWS::DynamoDB()->query($query);
-
-        if (!$result instanceof Result) {
-            throw new Exception('Could not scan table.');
-        }
-
-        return $result['Items'];
-    }
-
-    /**
      * @return void
      * @throws Exception
      */

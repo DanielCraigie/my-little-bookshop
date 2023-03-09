@@ -53,7 +53,8 @@ try {
      */
     $order = new Order();
     $order->setStartDate(new DateTime('now'));
-    $order->create($supplier);
+    $order->setSupplier($supplier);
+    $order->create();
 
     printf("Order[%s] from \"%s\" created.\n", $order->getPartitionKey(), $supplier->getName());
 } catch (Throwable $e) {

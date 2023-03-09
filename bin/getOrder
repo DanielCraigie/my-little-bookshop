@@ -1,0 +1,53 @@
+#!/usr/bin/env php
+<?php
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+    || count($argv) == 1
+):?>
+getOrder - provides details for a specific Order
+
+Options:
+    -p, --partition-key
+
+Usage:
+    getOrder --partition-key <Order PK>
+    getOrder --help
+
+<?php
+exit;
+endif;
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+use Danielcraigie\Bookshop\models\Order;
+
+try {
+    // verify table exists
+    $table = new Table();
+    $table->confirmExists();
+
+    $order = new Order();
+
+    /*
+     * Handle user arguments
+     */
+    for ($i = 1; $i < $argc; $i++) {
+        switch ($argv[$i]) {
+            case '-p':
+            case '--partition-key':
+                $order->loadFromPartitionKey($argv[++$i]);
+                break;
+        }
+    }
+
+    if ($order->isNewModel()) {
+        throw new Exception('Order could not be found.');
+    }
+
+    printf("Order[%s]\n", $order->getPartitionKey());
+    $order->printDataRecords();
+} catch (Throwable $e) {
+    printf("An error occurred while querying the table: %s", $e->getMessage());
+    return 1;
+}

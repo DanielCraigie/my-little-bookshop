@@ -15,9 +15,16 @@ I currently intend to bolt on a Vue.js web App to provide an interactive front e
 
 # Example Usage
 
-1. `./bin/createTable`
-2. `./bin/addSupplier`
-3. `./bin/scanTable`
+1. `docker-compose up -d`
+2. `cd bin`
+3. `./createTable`
+4. `./addSupplier`
+5. `./listSuppliers` (copy supplier name from output)
+6. `./createOrder --supplier-name <supplier name>`
+7. `./listOrders` (copy order# partition key)
+8. `./updateOrder --partition-key <Order PK> --books '[{"ISBN":"979-8365145672","Title":"The DynamoDB Book","Price":30.0,"Quantity":10}]'`
+9. `./getOrder' --partition-key <Order PK>`
+10. `./scanTable`
 
 # Useful Queries
 
@@ -31,4 +38,4 @@ Generate list of suppliers
 
 Retrieve details for a specific supplier
 
-`aws dynamodb query --endpoint-url http://localhost:8000 --table-name bookshop --key-condition-expression "PK=:suppliers" --expression-attribute-values '{":suppliers":{"S":"supplier#9ae2b1d6-4541-47b2-a2b0-0c292e8d2a53"}}'`
+`aws dynamodb query --endpoint-url http://localhost:8000 --table-name bookshop --key-condition-expression "PK=:supplier" --expression-attribute-values '{":supplier":{"S":"supplier#9ae2b1d6-4541-47b2-a2b0-0c292e8d2a53"}}'`

@@ -25,6 +25,11 @@ class Order extends AbstractModel
     private DateTime $endDate;
 
     /**
+     * @var Supplier $supplier
+     */
+    private Supplier $supplier;
+
+    /**
      * @return float
      */
     public function getTotal():float
@@ -82,8 +87,10 @@ class Order extends AbstractModel
             'TableName' => $_ENV['TABLE_NAME'],
         ]);
 
-        if (!$result instanceof Result) {
-            throw new Exception('Could not scan table.');
+        if (!$result instanceof Result
+            || empty($result['Items'])
+        ) {
+            throw new Exception('Could find Order for given Partition Key');
         }
 
         $supplier = reset($result['Items']);
@@ -91,12 +98,15 @@ class Order extends AbstractModel
     }
 
     /**
-     * @param Supplier $supplier
      * @return void
      * @throws Exception
      */
-    public function create(Supplier $supplier):void
+    public function create():void
     {
+        if (!$this->supplier instanceof Supplier) {
+            throw new Exception('Order must have a Supplier set before it can be created.');
+        }
+
         // create "details" record
         $result = AWS::DynamoDB()->putItem([
             'Item' => [
@@ -118,9 +128,9 @@ class Order extends AbstractModel
         $result = AWS::DynamoDB()->putItem([
             'Item' => [
                 'PK' => ['S' => $this->getPartitionKey()],
-                'SK' => ['S' => $supplier->getPartitionKey()],
-                'Value' => ['S' => $supplier->getName()],
-                'GSI1PK' => ['S' => $supplier->getPartitionKey()],
+                'SK' => ['S' => $this->supplier->getPartitionKey()],
+                'Value' => ['S' => $this->supplier->getName()],
+                'GSI1PK' => ['S' => $this->supplier->getPartitionKey()],
                 'GSI1SK' => ['S' => $this->getPartitionKey()],
             ],
             'TableName' => $_ENV['TABLE_NAME'],
@@ -129,6 +139,41 @@ class Order extends AbstractModel
         if (!$result instanceof Result) {
             throw new Exception('Could not set Supplier for new Order.');
         }
+    }
+
+    /**
+     * @param Supplier $supplier
+     * @return void
+     */
+    public function setSupplier(Supplier $supplier):void
+    {
+        $this->supplier = $supplier;
+    }
+
+    public function getData(string $sortKey = ''):array
+    {
+        $query = [
+            'ExpressionAttributeValues' => [
+                ':pk' => ['S' => $this->getPartitionKey()],
+            ],
+            'KeyConditionExpression' => 'PK=:pk',
+            'TableName' => $_ENV['TABLE_NAME'],
+        ];
+
+        if (!empty($sortKey)) {
+            $query['KeyConditionExpression'] .= ' AND begins_with(SK, :sk)';
+            $query['ExpressionAttributeValues'][':sk'] = ['S' => $sortKey];
+        }
+
+        $result = AWS::DynamoDB()->query($query);
+
+        if (!$result instanceof Result
+            || empty($result['Items'])
+        ) {
+            throw new Exception('Could not find Supplier.');
+        }
+
+        return $result['Items'];
     }
 
     /**

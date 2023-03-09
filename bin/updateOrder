@@ -8,12 +8,12 @@ if (in_array('--help', $argv)
 createOrder - updates an existing Order.
 
 Options:
-    -p, --order-partition-key   Partition Key of Order to be updated
+    -p, --partition-key   Partition Key of Order to be updated
     -b, --books                 JSON array of book records (must contain ISBN, Title, Price & Quantity)
     -h, --help                  Show this help
 
 Usage:
-    createOrder --order-partition-key <order PK> --data <JSON Array>
+    createOrder --partition-key <order PK> --data <JSON Array>
     createOrder --help
 
 <?php
@@ -38,7 +38,7 @@ try {
     for ($i = 1; $i < $argc; $i++) {
         switch ($argv[$i]) {
             case '-p':
-            case '--order-partition-key':
+            case '--partition-key':
                 // use supplier name search text to locate first match
                 $order->loadFromPartitionKey($argv[++$i]);
                 break;

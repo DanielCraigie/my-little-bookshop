@@ -11,8 +11,8 @@ Options:
     -n, --supplier-name
 
 Usage:
-    getSupplier --partition-key <supplier PK>
-    getSupplier --supplier-name <supplier Name>
+    getSupplier --partition-key <Supplier PK>
+    getSupplier --supplier-name <Supplier Name>
     getSupplier --help
 
 <?php
@@ -53,14 +53,7 @@ try {
     }
 
     printf("Supplier[%s]\n", $supplier->getPartitionKey());
-    foreach ($supplier->getData() as $item) {
-        foreach ($item as $key => $attribute) {
-            if ($key != 'PK') {
-                printf(" [%s]=>\"%s\"", $key, $attribute['S']);
-            }
-        }
-        echo "\n";
-    }
+    $supplier->printDataRecords();
 } catch (Throwable $e) {
     printf("An error occurred while querying the table: %s", $e->getMessage());
     return 1;
