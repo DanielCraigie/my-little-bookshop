@@ -3,11 +3,11 @@
 if (in_array('--help', $argv)
     || in_array('-h', $argv)
 ):?>
-createSupplier - creates new Supplier
+createCustomer - creates new Customer
 
 Usage:
-    createSupplier
-    createSupplier --help
+    createCustomer
+    createCustomer --help
 
 <?php
 exit;
@@ -16,7 +16,7 @@ endif;
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
-use Danielcraigie\Bookshop\models\Supplier;
+use Danielcraigie\Bookshop\models\Customer;
 
 try {
     $table = new Table();
@@ -28,21 +28,21 @@ try {
     $faker->addProvider(new Faker\Provider\en_GB\PhoneNumber($faker));
 
     /*
-     * Add supplier Name
+     * Add customer Name
      */
-    $supplier = new Supplier();
-    $supplier->setName($faker->company());
-    $supplier->create();
-    $supplier->addAddress([
+    $customer = new Customer();
+    $customer->setName($faker->name());
+    $customer->create();
+    $customer->addAddress([
         'Street1' => ['S' => $faker->streetAddress()],
         'City' => ['S' => $faker->city()],
         'Postcode' => ['S' => $faker->postcode()],
     ]);
-    $supplier->addPhone($faker->phoneNumber());
-    $supplier->addEmail($faker->email());
+    $customer->addPhone($faker->phoneNumber());
+    $customer->addEmail($faker->email());
 
-    printf("Supplier \"%s\" created.\n", $supplier->getName());
+    printf("Customer \"%s\" created.\n", $customer->getName());
 } catch (Throwable $e) {
-    printf("An error occurred while adding the Supplier: %s", $e->getMessage());
+    printf("An error occurred while adding the Customer: %s", $e->getMessage());
     return 1;
 }

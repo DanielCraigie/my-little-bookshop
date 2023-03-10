@@ -9,7 +9,7 @@ use Danielcraigie\Bookshop\models\attributes\Email;
 use Danielcraigie\Bookshop\models\attributes\Phone;
 use Exception;
 
-class Supplier extends AbstractModel
+class Customer extends AbstractModel
 {
     /**
      * @var string $name
@@ -44,7 +44,7 @@ class Supplier extends AbstractModel
             'IndexName' => 'GSI1',
             'KeyConditionExpression' => 'GSI1PK=:pk AND begins_with(GSI1SK, :sk)',
             'ExpressionAttributeValues' => [
-                ':pk' => ['S' => 'suppliers'],
+                ':pk' => ['S' => 'customers'],
                 ':sk' => ['S' => $name],
             ],
             'TableName' => $_ENV['TABLE_NAME'],
@@ -55,17 +55,17 @@ class Supplier extends AbstractModel
         }
 
         if (empty($result['Items'])) {
-            throw new Exception(sprintf("Could not find Supplier with name \"%s\"", $name));
+            throw new Exception(sprintf("Could not find Customer with name \"%s\"", $name));
         }
 
-        $supplier = reset($result['Items']);
+        $customer = reset($result['Items']);
 
-        if (empty($supplier)) {
-            throw new Exception(sprintf("Supplier \"%s\" could not be found.", $name));
+        if (empty($customer)) {
+            throw new Exception(sprintf("Customer \"%s\" could not be found.", $name));
         }
 
-        $this->setPartitionKey($supplier['PK']['S']);
-        $this->setName($supplier['Value']['S']);
+        $this->setPartitionKey($customer['PK']['S']);
+        $this->setName($customer['Value']['S']);
     }
 
     /**
@@ -93,7 +93,7 @@ class Supplier extends AbstractModel
         $supplier = reset($result['Items']);
 
         if (empty($supplier)) {
-            throw new Exception(sprintf("Supplier with Partition Key \"%s\" could not be found.", $partitionKey));
+            throw new Exception(sprintf("Customer with Partition Key \"%s\" could not be found.", $partitionKey));
         }
 
         $this->setPartitionKey($supplier['PK']['S']);
@@ -110,7 +110,7 @@ class Supplier extends AbstractModel
             'Item' => [
                 'PK' => ['S' => $this->getPartitionKey()],
                 'SK' => ['S' => 'name'],
-                'GSI1PK' => ['S' => 'suppliers'],
+                'GSI1PK' => ['S' => 'customers'],
                 'GSI1SK' => ['S' => $this->getName()],
                 'Value' => ['S' => $this->getName()],
             ],
@@ -118,7 +118,7 @@ class Supplier extends AbstractModel
         ]);
 
         if ($result instanceof Result) {
-            printf("Supplier \"%s\" Name added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
+            printf("Customer \"%s\" Name added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
         } else {
             throw new Exception(sprintf("Could not add \"%s\" to [%s].", $this->getName(), $_ENV['TABLE_NAME']));
         }
@@ -134,7 +134,7 @@ class Supplier extends AbstractModel
         $addressModel = new Address($this);
         $addressModel->setValue($newAddress);
         $addressModel->create();
-        printf("Supplier \"%s\" Address added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
+        printf("Customer \"%s\" Address added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
     }
 
     /**
@@ -147,7 +147,7 @@ class Supplier extends AbstractModel
         $phoneModel = new Phone($this);
         $phoneModel->setValue($newPhone);
         $phoneModel->create();
-        printf("Supplier \"%s\" Phone Number added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
+        printf("Customer \"%s\" Phone Number added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
     }
 
     /**
@@ -160,6 +160,6 @@ class Supplier extends AbstractModel
         $emailModel = new Email($this);
         $emailModel->setValue($newEmail);
         $emailModel->create();
-        printf("Supplier \"%s\" Email added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
+        printf("Customer \"%s\" Email added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
     }
 }

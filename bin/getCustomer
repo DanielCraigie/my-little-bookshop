@@ -1,0 +1,53 @@
+#!/usr/bin/env php
+<?php
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+    || count($argv) == 1
+):?>
+getCustomer - provides details for a supplier Name/PK
+
+Options:
+    -p, --partition-key
+
+Usage:
+    getSupplier --partition-key <Customer PK>
+    getSupplier --help
+
+<?php
+exit;
+endif;
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+use Danielcraigie\Bookshop\models\Supplier;
+
+try {
+    // verify table exists
+    $table = new Table();
+    $table->confirmExists();
+
+    $supplier = new Supplier();
+
+    /*
+     * Handle user arguments
+     */
+    for ($i = 1; $i < $argc; $i++) {
+        switch ($argv[$i]) {
+            case '-p':
+            case '--partition-key':
+                $supplier->loadFromPartitionKey($argv[++$i]);
+                break;
+        }
+    }
+
+    if ($supplier->isNewModel()) {
+        throw new Exception('Customer could not be found.');
+    }
+
+    printf("Customer[%s]\n", $supplier->getPartitionKey());
+    $supplier->printDataRecords();
+} catch (Throwable $e) {
+    printf("An error occurred while querying the table: %s", $e->getMessage());
+    return 1;
+}

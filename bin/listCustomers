@@ -3,11 +3,11 @@
 if (in_array('--help', $argv)
     || in_array('-h', $argv)
 ):?>
-listSuppliers - list Suppliers
+listCustomers - lists Customers
 
 Usage:
-    listSuppliers
-    listSuppliers --help
+    listCustomers
+    listCustomers --help
 
 <?php
 exit;
@@ -26,11 +26,10 @@ try {
     $resultTotal = 0;
     $query = [
         'IndexName' => 'GSI1',
-        'KeyConditionExpression' => 'GSI1PK=:val AND begins_with(GSI1SK,:sk)',
+        'KeyConditionExpression' => 'GSI1PK=:val',
         'ExpressionAttributeNames' => ['#value' => 'Value'],
         'ExpressionAttributeValues' => [
-            ':val' => ['S' => 'suppliers'],
-            ':sk' => ['S' => 'supplier#'],
+            ':val' => ['S' => 'customers'],
         ],
         'ProjectionExpression' => 'GSI1PK,PK,#value',
         'TableName' => $_ENV['TABLE_NAME'],

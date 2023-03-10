@@ -4,53 +4,12 @@ namespace Danielcraigie\Bookshop\models;
 
 use Aws\Result;
 use Danielcraigie\Bookshop\AWS\AWS;
+use Danielcraigie\Bookshop\traits\PartitionKey;
 use Exception;
-use Ramsey\Uuid\Uuid;
 
 abstract class AbstractModel
 {
-    /**
-     * @var string
-     */
-    private string $partitionKey;
-
-    /**
-     * @var bool
-     */
-    private bool $newModel = true;
-
-    public function __construct()
-    {
-        // auto generate PartitionKey for new Objects
-        $classPath = explode('\\', get_class($this));
-        $this->partitionKey = sprintf('%s#%s', mb_strtolower(end($classPath)), Uuid::uuid4()->toString());
-    }
-
-    /**
-     * @return string
-     */
-    public function getPartitionKey():string
-    {
-        return $this->partitionKey;
-    }
-
-    /**
-     * @param string $pk
-     * @return void
-     */
-    protected function setPartitionKey(string $pk):void
-    {
-        $this->partitionKey = $pk;
-        $this->newModel = false;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isNewModel():bool
-    {
-        return $this->newModel;
-    }
+    use PartitionKey;
 
     /**
      * @param string $partitionKey

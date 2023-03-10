@@ -1,5 +1,17 @@
 #!/usr/bin/env php
 <?php
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+):?>
+listOrders - lists Orders
+
+Usage:
+    listOrders
+    listOrders --help
+
+<?php
+exit;
+endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
