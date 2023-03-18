@@ -2,36 +2,17 @@
 
 namespace Danielcraigie\Bookshop\models;
 
-use Aws\Result;
-use Danielcraigie\Bookshop\AWS\AWS;
-use Danielcraigie\Bookshop\models\attributes\Address;
-use Danielcraigie\Bookshop\models\attributes\Email;
-use Danielcraigie\Bookshop\models\attributes\Phone;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
+use Danielcraigie\Bookshop\traits\Address;
+use Danielcraigie\Bookshop\traits\Email;
+use Danielcraigie\Bookshop\traits\Phone;
 use Exception;
 
 class Customer extends AbstractModel
 {
-    /**
-     * @var string $name
-     */
-    private string $name = '';
-
-    /**
-     * @param string $name
-     * @return void
-     */
-    public function setName(string $name):void
-    {
-        $this->name = $name;
-    }
-
-    /**
-     * @return string
-     */
-    public function getName():string
-    {
-        return $this->name;
-    }
+    use Address;
+    use Phone;
+    use Email;
 
     /**
      * @param string $name
@@ -40,64 +21,22 @@ class Customer extends AbstractModel
      */
     public function loadFromName(string $name):void
     {
-        $result = AWS::DynamoDB()->query([
+        $results = DynamoDB::query([
             'IndexName' => 'GSI1',
             'KeyConditionExpression' => 'GSI1PK=:pk AND begins_with(GSI1SK, :sk)',
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => 'customers'],
                 ':sk' => ['S' => $name],
             ],
-            'TableName' => $_ENV['TABLE_NAME'],
         ]);
 
-        if (!$result instanceof Result) {
-            throw new Exception('Could not query table.');
-        }
-
-        if (empty($result['Items'])) {
+        if (empty($results)) {
             throw new Exception(sprintf("Could not find Customer with name \"%s\"", $name));
         }
 
-        $customer = reset($result['Items']);
-
-        if (empty($customer)) {
-            throw new Exception(sprintf("Customer \"%s\" could not be found.", $name));
-        }
-
-        $this->setPartitionKey($customer['PK']['S']);
-        $this->setName($customer['Value']['S']);
-    }
-
-    /**
-     * @param string $partitionKey
-     * @return void
-     * @throws Exception
-     */
-    public function loadFromPartitionKey(string $partitionKey):void
-    {
-        $result = AWS::DynamoDB()->query([
-            'KeyConditionExpression' => 'PK=:pk AND SK=:sk',
-            'ExpressionAttributeNames' => ['#value' => 'Value'],
-            'ExpressionAttributeValues' => [
-                ':pk' => ['S' => $partitionKey],
-                ':sk' => ['S' => 'name'],
-            ],
-            'ProjectionExpression' => 'PK,#value',
-            'TableName' => $_ENV['TABLE_NAME'],
-        ]);
-
-        if (!$result instanceof Result) {
-            throw new Exception('Could not scan table.');
-        }
-
-        $supplier = reset($result['Items']);
-
-        if (empty($supplier)) {
-            throw new Exception(sprintf("Customer with Partition Key \"%s\" could not be found.", $partitionKey));
-        }
-
-        $this->setPartitionKey($supplier['PK']['S']);
-        $this->setName($supplier['Value']['S']);
+        $customer = reset($results);
+        $this->setPartitionKey(reset($customer['PK']));
+        $this->setName(reset($customer['Value']));
     }
 
     /**
@@ -106,60 +45,13 @@ class Customer extends AbstractModel
      */
     public function create():void
     {
-        $result =  AWS::DynamoDB()->putItem([
-            'Item' => [
-                'PK' => ['S' => $this->getPartitionKey()],
-                'SK' => ['S' => 'name'],
-                'GSI1PK' => ['S' => 'customers'],
-                'GSI1SK' => ['S' => $this->getName()],
-                'Value' => ['S' => $this->getName()],
-            ],
-            'TableName' => $_ENV['TABLE_NAME'],
+        $this->putItem([
+            'SK' => ['S' => 'name'],
+            'GSI1PK' => ['S' => 'customers'],
+            'GSI1SK' => ['S' => $this->getName()],
+            'Value' => ['S' => $this->getName()],
         ]);
 
-        if ($result instanceof Result) {
-            printf("Customer \"%s\" Name added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
-        } else {
-            throw new Exception(sprintf("Could not add \"%s\" to [%s].", $this->getName(), $_ENV['TABLE_NAME']));
-        }
-    }
-
-    /**
-     * @param array $newAddress
-     * @return void
-     * @throws Exception
-     */
-    public function addAddress(array $newAddress):void
-    {
-        $addressModel = new Address($this);
-        $addressModel->setValue($newAddress);
-        $addressModel->create();
-        printf("Customer \"%s\" Address added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
-    }
-
-    /**
-     * @param string $newPhone
-     * @return void
-     * @throws Exception
-     */
-    public function addPhone(string $newPhone):void
-    {
-        $phoneModel = new Phone($this);
-        $phoneModel->setValue($newPhone);
-        $phoneModel->create();
-        printf("Customer \"%s\" Phone Number added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
-    }
-
-    /**
-     * @param string $newEmail
-     * @return void
-     * @throws Exception
-     */
-    public function addEmail(string $newEmail):void
-    {
-        $emailModel = new Email($this);
-        $emailModel->setValue($newEmail);
-        $emailModel->create();
-        printf("Customer \"%s\" Email added to [%s].\n", $this->getName(), $_ENV['TABLE_NAME']);
+        printf("Customer \"%s\" Name added to Table.\n", $this->getName());
     }
 }

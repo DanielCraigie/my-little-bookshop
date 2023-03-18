@@ -2,9 +2,7 @@
 
 namespace Danielcraigie\Bookshop\models\attributes;
 
-use Aws\Result;
-use Danielcraigie\Bookshop\AWS\AWS;
-use Danielcraigie\Bookshop\models\AbstractModel;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\traits\PartitionKey;
 use Exception;
 
@@ -13,9 +11,9 @@ abstract class AbstractAttribute
     use PartitionKey;
 
     /**
-     * @var AbstractModel|null $model
+     * @var string|null $parentPartitionKey
      */
-    private ?AbstractModel $model;
+    private ?string $parentPartitionKey;
 
     /**
      * @var string|array $value
@@ -23,19 +21,19 @@ abstract class AbstractAttribute
     private string|array $value;
 
     /**
-     * @param AbstractModel $model
+     * @param string $parentPartitionKey
      */
-    public function __construct(AbstractModel $model)
+    public function __construct(string $parentPartitionKey)
     {
-        $this->model = $model;
+        $this->parentPartitionKey = $parentPartitionKey;
     }
 
     /**
-     * @return AbstractModel
+     * @return string
      */
-    protected function getModel():AbstractModel
+    protected function getParentPartitionKey():string
     {
-        return $this->model;
+        return $this->parentPartitionKey;
     }
 
     /**
@@ -61,17 +59,14 @@ abstract class AbstractAttribute
      */
     public function create():void
     {
-        $result = AWS::DynamoDB()->putItem([
-            'Item' => [
-                'PK' => ['S' => $this->model->getPartitionKey()],
+        try {
+            DynamoDB::putItem([
+                'PK' => ['S' => $this->getParentPartitionKey()],
                 'SK' => ['S' => $this->getPartitionKey()],
                 'Value' => ['S' => $this->value],
-            ],
-            'TableName' => $_ENV['TABLE_NAME'],
-        ]);
-
-        if (!$result instanceof Result) {
-            throw new Exception(sprintf('Could not add %s for \"%s\" to [%s].', __CLASS__, $this->model->getPartitionKey(), $_ENV['TABLE_NAME']));
+            ]);
+        } catch (Exception $e) {
+            throw new Exception(sprintf('Could not add %s for \"%s\" to Table.', __CLASS__, $this->getParentPartitionKey()));
         }
     }
 }

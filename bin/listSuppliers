@@ -26,13 +26,12 @@ try {
     $resultTotal = 0;
     $query = [
         'IndexName' => 'GSI1',
-        'KeyConditionExpression' => 'GSI1PK=:val AND begins_with(GSI1SK,:sk)',
+        'KeyConditionExpression' => 'GSI1PK=:val',
         'ExpressionAttributeNames' => ['#value' => 'Value'],
         'ExpressionAttributeValues' => [
             ':val' => ['S' => 'suppliers'],
-            ':sk' => ['S' => 'supplier#'],
         ],
-        'ProjectionExpression' => 'GSI1PK,PK,#value',
+        'ProjectionExpression' => 'PK,#value',
         'TableName' => $_ENV['TABLE_NAME'],
     ];
 
@@ -45,7 +44,7 @@ try {
         $resultTotal += $result['Count'];
 
         foreach ($result['Items'] as $item) {
-            printf("[PK] => %s, [Name] => \"%s\"\n", $item['PK']['S'], $item['Value']['S']);
+            printf("[PK] => %s, [Name] => \"%s\"\n", reset($item['PK']), reset($item['Value']));
         }
 
         if (!empty($result['LastEvaluatedKey'])) {

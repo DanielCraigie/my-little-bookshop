@@ -4,6 +4,8 @@ namespace Danielcraigie\Bookshop\models;
 
 use Aws\Result;
 use Danielcraigie\Bookshop\AWS\AWS;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDBTableException;
 use DateTime;
 use Exception;
 
@@ -54,6 +56,15 @@ class Order extends AbstractModel
     }
 
     /**
+     * @param float $total
+     * @return void
+     */
+    public function setTotal(float $total):void
+    {
+        $this->total = $total;
+    }
+
+    /**
      * @param DateTime $date
      * @return void
      */
@@ -73,28 +84,40 @@ class Order extends AbstractModel
 
     /**
      * @param string $partitionKey
+     * @param string $sortKey
      * @return void
+     * @throws DynamoDBTableException
      * @throws Exception
      */
-    public function loadFromPartitionKey(string $partitionKey):void
+    public function loadFromPartitionKey(string $partitionKey, string $sortKey = 'name'):void
     {
-        $result = AWS::DynamoDB()->query([
-            'KeyConditionExpression' => 'PK=:pk AND SK=:sk',
+        $results = DynamoDB::query([
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => $partitionKey],
                 ':sk' => ['S' => 'details'],
             ],
-            'TableName' => $_ENV['TABLE_NAME'],
+            'KeyConditionExpression' => 'PK=:pk AND SK=:sk',
+            'ProjectionExpression' => 'PK',
         ]);
 
-        if (!$result instanceof Result
-            || empty($result['Items'])
-        ) {
-            throw new Exception('Could find Order for given Partition Key');
+        if (empty($results)) {
+            throw new Exception(sprintf("%s with partition key: \"%s\" could not be found.", ucfirst(get_class($this)), $partitionKey));
         }
 
-        $supplier = reset($result['Items']);
-        $this->setPartitionKey($supplier['PK']['S']);
+        $result = reset($results);
+        $this->setPartitionKey(reset($result['PK']));
+
+        if (isset($result['Total'])) {
+            $this->setTotal((float)reset($result['Total']));
+        }
+
+        if (isset($result['StartDate'])) {
+            $this->setStartDate(new DateTime(reset($result['StartDate'])));
+        }
+
+        if (isset($result['EndDate'])) {
+            $this->setEndDate(new DateTime(reset($result['EndDate'])));
+        }
     }
 
     /**
@@ -108,36 +131,24 @@ class Order extends AbstractModel
         }
 
         // create "details" record
-        $result = AWS::DynamoDB()->putItem([
-            'Item' => [
-                'PK' => ['S' => $this->getPartitionKey()],
-                'SK' => ['S' => 'details'],
-                'StartDate' => ['S' => $this->startDate->format('c')],
-                'Total' => ['N' => $this->total],
-                'GSI1PK' => ['S' => 'orders'],
-                'GSI1SK' => ['S' => $this->getPartitionKey()],
-            ],
-            'TableName' => $_ENV['TABLE_NAME'],
+        $this->putItem([
+            'SK' => ['S' => 'details'],
+            'StartDate' => ['S' => $this->startDate->format('c')],
+            'Total' => ['N' => $this->total],
+            'GSI1PK' => ['S' => 'orders'],
+            'GSI1SK' => ['S' => $this->getPartitionKey()],
         ]);
 
-        if (!$result instanceof Result) {
-            throw new Exception('Could not create new Order record.');
-        }
-
-        // create Supplier relation record
-        $result = AWS::DynamoDB()->putItem([
-            'Item' => [
-                'PK' => ['S' => $this->getPartitionKey()],
+        try {
+            // create Supplier relation record
+            $this->putItem([
                 'SK' => ['S' => $this->supplier->getPartitionKey()],
                 'Value' => ['S' => $this->supplier->getName()],
                 'GSI1PK' => ['S' => $this->supplier->getPartitionKey()],
                 'GSI1SK' => ['S' => $this->getPartitionKey()],
-            ],
-            'TableName' => $_ENV['TABLE_NAME'],
-        ]);
-
-        if (!$result instanceof Result) {
-            throw new Exception('Could not set Supplier for new Order.');
+            ]);
+        } catch (Exception) {
+            throw new Exception(sprintf("Could not set Supplier: %s for Order: %s.", $this->supplier->getPartitionKey(), $this->getPartitionKey()));
         }
     }
 
@@ -223,7 +234,7 @@ class Order extends AbstractModel
                 '#total' => 'Total',
             ],
             'ExpressionAttributeValues' => [
-                ':total' => ['N' => $price * $result['Attributes']['Quantity']['N']],
+                ':total' => ['N' => round($price * $result['Attributes']['Quantity']['N'], 2)],
             ],
             'Key' => [
                 'PK' => ['S' => $this->getPartitionKey()],

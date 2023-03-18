@@ -9,11 +9,11 @@ createOrder - updates an existing Order.
 
 Options:
     -p, --partition-key   Partition Key of Order to be updated
-    -b, --books                 JSON array of book records (must contain ISBN, Title, Price & Quantity)
-    -h, --help                  Show this help
+    -b, --books           JSON array of book records (must contain ISBN, Title, Price & Quantity)
+    -h, --help            Show this help
 
 Usage:
-    createOrder --partition-key <order PK> --data <JSON Array>
+    createOrder --partition-key <order PK> --books <JSON Array>
     createOrder --help
 
 <?php
