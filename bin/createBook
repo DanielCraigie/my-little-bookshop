@@ -1,0 +1,288 @@
+#!/usr/bin/env php
+<?php
+
+$jsonSchema = <<<'JSON'
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/product.schema.json",
+  "type":"object",
+  "properties": {
+    "isbn": { "type": "string", "minLength": 10, "pattern": "^[0-9-]+$" },
+    "title": { "type": "string", "minLength": 1 },
+    "author": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "publisher": { "type": "string", "minLength": 1 },
+    "genre": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "format": { "enum": [ "hardback", "paperback" ] },
+    "tagLine": { "type": "string" },
+    "price": { "type": "number", "minimum": 0 }
+  },
+  "required": [ "isbn", "title", "author", "publisher", "genre", "format" ]
+}
+JSON;
+
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+):?>
+createBook - Adds a new book to the Bookshop
+
+Options:
+    -d, --details   JSON array of book details (see schema)
+    -h, --help      Show this help
+
+JSON Schema:
+<?= $jsonSchema ?>
+
+
+Usage:
+    createBook --details <JSON string>
+    createBook --help
+
+<?php
+exit;
+endif;
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\Result;
+use Brick\Money\Money;
+use Danielcraigie\Bookshop\AWS\AWS;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+use Ramsey\Uuid\Uuid;
+use Swaggest\JsonSchema\Schema;
+
+try {
+    $table = new Table();
+    $table->confirmExists();
+    $details = [];
+
+    /*
+     * Handle user arguments
+     */
+    for ($i = 1; $i < $argc; $i++) {
+        switch ($argv[$i]) {
+            case '-d':
+            case '--details':
+                $json = $argv[++$i];
+
+                // validate JSON
+                $schema = Schema::import(json_decode($jsonSchema));
+                $schema->in(json_decode($json));
+
+                // use supplier name search text to locate first match
+                $details = json_decode($json, true);
+                break;
+        }
+    }
+
+    if (empty($details)) {
+        throw new Exception(sprintf('you must provide book details as a JSON object.'));
+    }
+
+    $bookPartitionKey = sprintf('book#%s', $details['isbn'] ?? '');
+
+    // verify that ISBN isn't already in use
+    $result = AWS::DynamoDB()->query([
+        'ExpressionAttributeValues' => [
+            ':pk' => ['S' => $bookPartitionKey],
+        ],
+        'KeyConditionExpression' => 'PK=:pk',
+        'TableName' => $_ENV['TABLE_NAME'],
+    ]);
+
+    if (!$result instanceof Result
+        || !empty($result['Items'])
+    ) {
+        throw new Exception('ISBN is already in use, you can not add a book twice.');
+    }
+
+    $price = Money::of($details['price'] ?? 0, $_ENV['CURRENCY']);
+
+    /*
+     * write book item
+     */
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $bookPartitionKey],
+            'SK' => ['S' => 'details'],
+            'Details' => ['S' => json_encode([
+                'TagLine' => ['S' => $details['tagLine'] ?? ''],
+                'Format' => ['S' => $details['format']],
+                'Price' => ['S' => (string) $price->getAmount()],
+            ], true)],
+            'Quantity' => ['N' => 0],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Could not add Book %s to table: %s', $bookPartitionKey, $e->getMessage()));
+    }
+
+    /*
+     * write title relation
+     */
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $bookPartitionKey],
+            'SK' => ['S' => 'title'],
+            'Value' => ['S' => $details['title']],
+            'GSI1PK' => ['S' => 'titles'],
+            'GSI1SK' => ['S' => $details['title']],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Could not write Title relation for Book %s: %s', $bookPartitionKey, $e->getMessage()));
+    }
+
+    /*
+     * write author relation(s)
+     */
+    foreach ($details['author'] as $author) {
+        // search for existing author record
+        $result = AWS::DynamoDB()->query([
+            'ExpressionAttributeValues' => [
+                ':pk' => ['S' => 'authors'],
+                ':sk' => ['S' => $author],
+            ],
+            'IndexName' => 'GSI1',
+            'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
+            'TableName' => $_ENV['TABLE_NAME'],
+        ]);
+
+        // add author if not found
+        if (!$result instanceof Result
+            || empty($result['Items'])
+        ) {
+            $authorPartitionKey = sprintf('author#%s', Uuid::uuid4()->toString());
+
+            try {
+                DynamoDB::putItem([
+                    'PK' => ['S' => $authorPartitionKey],
+                    'SK' => ['S' => 'name'],
+                    'Value' => ['S' => $author],
+                    'GSI1PK' => ['S' => 'authors'],
+                    'GSI1SK' => ['S' => $author],
+                ]);
+            } catch (Exception $e) {
+                throw new Exception(sprintf('Could not write Author %s to table: %s', $authorPartitionKey, $e->getMessage()));
+            }
+        } else if ($result['Count'] > 1) {
+            throw new Exception(sprintf('More than one Author (%d) matched against search term "%s": %s', $result['Count'], $author, print_r($result['Items'], true)));
+        } else {
+            $authorPartitionKey = $result['Items'][0]['PK']['S'];
+        }
+
+        try {
+            DynamoDB::putItem([
+                'PK' => ['S' => $bookPartitionKey],
+                'SK' => ['S' => $authorPartitionKey],
+                'GSI1PK' => ['S' => $authorPartitionKey],
+                'GSI1SK' => ['S' => $bookPartitionKey],
+            ]);
+        } catch (Exception $e) {
+            throw new Exception(sprintf('Could not write Author relation %s for Book %s: %s', $authorPartitionKey, $bookPartitionKey, $e->getMessage()));
+        }
+    }
+
+    /*
+     * write publisher relation
+     */
+    $publisher = $details['publisher'];
+
+    // find existing publisher item
+    $result = AWS::DynamoDB()->query([
+        'ExpressionAttributeValues' => [
+            ':pk' => ['S' => 'publishers'],
+            ':sk' => ['S' => $publisher],
+        ],
+        'IndexName' => 'GSI1',
+        'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
+        'TableName' => $_ENV['TABLE_NAME'],
+    ]);
+
+    // create new publisher item if none found
+    if (!$result instanceof Result
+        || empty($result['Items'])
+    ) {
+        $publisherPartitionKey = sprintf('publisher#%s', Uuid::uuid4()->toString());
+
+        try {
+            DynamoDB::putItem([
+                'PK' => ['S' => $publisherPartitionKey],
+                'SK' => ['S' => 'name'],
+                'Value' => ['S' => $publisher],
+                'GSI1PK' => ['S' => 'publishers'],
+                'GSI1SK' => ['S' => $publisher],
+            ]);
+        } catch (Exception $e) {
+            throw new Exception(sprintf('Could not write Publisher %s to table: %s', $publisherPartitionKey, $e->getMessage()));
+        }
+    } else if ($result['Count'] > 1) {
+        throw new Exception(sprintf('More than one Publisher (%d) matched against search term "%s": %s', $result['Count'], $publisher, print_r($result['Items'], true)));
+    } else {
+        $publisherPartitionKey = $result['Items'][0]['PK']['S'];
+    }
+
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $bookPartitionKey],
+            'SK' => ['S' => $publisherPartitionKey],
+            'GSI1PK' => ['S' => $publisherPartitionKey],
+            'GSI1SK' => ['S' => $bookPartitionKey],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Could not write Publisher relation %s for Book %s: %s', $publisherPartitionKey, $bookPartitionKey, $e->getMessage()));
+    }
+
+    /*
+     * write genre relation(s)
+     */
+    foreach ($details['genre'] as $genre) {
+        // search for existing genre record
+        $result = AWS::DynamoDB()->query([
+            'ExpressionAttributeValues' => [
+                ':pk' => ['S' => 'genres'],
+                ':sk' => ['S' => $genre],
+            ],
+            'IndexName' => 'GSI1',
+            'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
+            'TableName' => $_ENV['TABLE_NAME'],
+        ]);
+
+        // add genre if not found
+        if (!$result instanceof Result
+            || empty($result['Items'])
+        ) {
+            $genrePartitionKey = sprintf('genre#%s', Uuid::uuid4()->toString());
+
+            try {
+                DynamoDB::putItem([
+                    'PK' => ['S' => $genrePartitionKey],
+                    'SK' => ['S' => 'name'],
+                    'Value' => ['S' => $genre],
+                    'GSI1PK' => ['S' => 'genres'],
+                    'GSI1SK' => ['S' => $genre],
+                ]);
+            } catch (Exception $e) {
+                throw new Exception(sprintf('Could not write Genre %s to table: %s', $genrePartitionKey, $e->getMessage()));
+            }
+        } else if ($result['Count'] > 1) {
+            throw new Exception(sprintf('More than one Genre (%d) matched against search term "%s": %s', $result['Count'], $genre, print_r($result['Items'], true)));
+        } else {
+            $genrePartitionKey = $result['Items'][0]['PK']['S'];
+        }
+
+        try {
+            DynamoDB::putItem([
+                'PK' => ['S' => $bookPartitionKey],
+                'SK' => ['S' => $genrePartitionKey],
+                'GSI1PK' => ['S' => $genrePartitionKey],
+                'GSI1SK' => ['S' => $bookPartitionKey],
+            ]);
+        } catch (Exception $e) {
+            throw new Exception(sprintf('Could not write Genre relation %s for Book %s: %s', $genrePartitionKey, $bookPartitionKey, $e->getMessage()));
+        }
+    }
+
+    printf("Book[%s] created.\n", $bookPartitionKey);
+} catch (Throwable $e) {
+    printf("An error occurred while adding the Book: %s", $e->getMessage());
+    return 1;
+}

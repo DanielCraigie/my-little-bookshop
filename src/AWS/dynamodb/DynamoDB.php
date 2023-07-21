@@ -50,4 +50,25 @@ class DynamoDB
             throw new DynamoDBTableException('Could not write item to table: ' . $e->getMessage());
         }
     }
+
+    /**
+     * @param array $item
+     * @return void
+     * @throws DynamoDBTableException
+     */
+    public static function updateItem(array $item): void
+    {
+        try {
+            $result = AWS::DynamoDB()->updateItem([
+                'Item' => $item,
+                'TableName' => $_ENV['TABLE_NAME'],
+            ]);
+
+            if (!$result instanceof Result) {
+                throw new Exception('putItem result is not an instance of Aws\Result');
+            }
+        } catch (Exception $e) {
+            throw new DynamoDBTableException('Could not write item to table: ' . $e->getMessage());
+        }
+    }
 }

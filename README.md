@@ -6,28 +6,40 @@ It's going to start as a backend CLI app to begin with while I get the DB integr
 I currently intend to bolt on a Vue.js web App to provide an interactive front end later (maybe throw some GraphQL in as well).
 
 ## Objectives
-
 - Have fun
 - Gain a better understanding of DynamoDB and NoSQL data modelling (coming from an SQL background)
 - Learn how to integrate DynamoDB with PHP*
 
 *Project will probably be ported to GO to create a Lambda driven API Gateway infrastructure later.
 
-# Example Usage
+# Bootstrap
+Follow these steps to setup a working environment.
+1. Clone example env file: `cp .env.example .env`
+   1. if you're operating in local dev env the `AWS_ACCESS_KEY_ID` & `AWS_SECRET_ACCESS_KEY` must have values (even if they're gibberish)
+2. Install Composer packages: `composer install`
+3. Start local DynamoDB container: `docker-compose up -d`
 
-1. `docker-compose up -d`
-2. `cd bin`
-3. `./createTable`
-4. `./addSupplier`
-5. `./listSuppliers` (copy supplier name from output)
-6. `./createOrder --supplier-name <supplier name>`
-7. `./listOrders` (copy order# partition key)
-8. `./updateOrder --partition-key <Order PK> --books '[{"ISBN":"979-8365145672","Title":"The DynamoDB Book","Price":30.0,"Quantity":10}]'`
-9. `./getOrder' --partition-key <Order PK>`
-10. `./scanTable`
+# Structure
+- `./bin` - PHP CLI commands to execute actions (project working directory)
+- `./docker/dynamodb` - persistent local storage for DynamoDB (ignored by Git)
+- `./docs` - project documentation
+- `./src` - PHP source code
+- `./vendor` - Composer packages
+- `./.bootstrap.php` - PHP bootstrapper (used by all CLI commands)
+- `./.env` - PHP Environment variables
+
+# Example Usage
+1. `cd bin`
+2. `./createTable`
+3. `./createSupplier`
+4. `./listSuppliers` (copy supplier name from output)
+5. `./createOrder --supplier-name <supplier name>`
+6. `./listOrders` (copy order# partition key)
+7. `./updateOrder --partition-key <Order PK> --books '[{"ISBN":"979-8365145672","Title":"The DynamoDB Book","Price":30.0,"Quantity":10}]'`
+8. `./getOrder' --partition-key <Order PK>`
+9. `./scanTable`
 
 # Useful Queries
-
 Select all items for PK
 
 `aws dynamodb query --endpoint-url http://localhost:8000 --table-name bookshop --key-condition-expression "PK=:pk" --expression-attribute-values '{":pk":{"S":"supplier#9ae2b1d6-4541-47b2-a2b0-0c292e8d2a53"}}'`
