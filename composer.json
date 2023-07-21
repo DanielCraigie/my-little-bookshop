@@ -16,6 +16,8 @@
         "aws/aws-sdk-php": "*",
         "vlucas/phpdotenv": "*",
         "fakerphp/faker": "*",
-        "ramsey/uuid": "^4.7"
+        "ramsey/uuid": "^4.7",
+        "swaggest/json-schema": "^0.12.41",
+        "brick/money": "^0.8.0"
     }
 }

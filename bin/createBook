@@ -45,7 +45,6 @@ require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
 use Aws\Result;
 use Brick\Money\Money;
-use Danielcraigie\Bookshop\AWS\AWS;
 use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 use Ramsey\Uuid\Uuid;
@@ -82,12 +81,11 @@ try {
     $bookPartitionKey = sprintf('book#%s', $details['isbn'] ?? '');
 
     // verify that ISBN isn't already in use
-    $result = AWS::DynamoDB()->query([
+    $result = DynamoDB::query([
         'ExpressionAttributeValues' => [
             ':pk' => ['S' => $bookPartitionKey],
         ],
         'KeyConditionExpression' => 'PK=:pk',
-        'TableName' => $_ENV['TABLE_NAME'],
     ]);
 
     if (!$result instanceof Result
@@ -136,14 +134,13 @@ try {
      */
     foreach ($details['author'] as $author) {
         // search for existing author record
-        $result = AWS::DynamoDB()->query([
+        $result = DynamoDB::query([
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => 'authors'],
                 ':sk' => ['S' => $author],
             ],
             'IndexName' => 'GSI1',
             'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
-            'TableName' => $_ENV['TABLE_NAME'],
         ]);
 
         // add author if not found
@@ -187,14 +184,13 @@ try {
     $publisher = $details['publisher'];
 
     // find existing publisher item
-    $result = AWS::DynamoDB()->query([
+    $result = DynamoDB::query([
         'ExpressionAttributeValues' => [
             ':pk' => ['S' => 'publishers'],
             ':sk' => ['S' => $publisher],
         ],
         'IndexName' => 'GSI1',
         'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
-        'TableName' => $_ENV['TABLE_NAME'],
     ]);
 
     // create new publisher item if none found
@@ -236,14 +232,13 @@ try {
      */
     foreach ($details['genre'] as $genre) {
         // search for existing genre record
-        $result = AWS::DynamoDB()->query([
+        $result = DynamoDB::query([
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => 'genres'],
                 ':sk' => ['S' => $genre],
             ],
             'IndexName' => 'GSI1',
             'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
-            'TableName' => $_ENV['TABLE_NAME'],
         ]);
 
         // add genre if not found

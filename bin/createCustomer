@@ -15,8 +15,10 @@ endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
+use Aws\Result;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
-use Danielcraigie\Bookshop\models\Customer;
+use Ramsey\Uuid\Uuid;
 
 try {
     $table = new Table();
@@ -27,21 +29,89 @@ try {
     $faker->addProvider(new Faker\Provider\en_GB\Address($faker));
     $faker->addProvider(new Faker\Provider\en_GB\PhoneNumber($faker));
 
-    /*
-     * Add customer Name
-     */
-    $customer = new Customer();
-    $customer->setName($faker->name());
-    $customer->create();
-    $customer->addAddress([
-        'Street1' => ['S' => $faker->streetAddress()],
-        'City' => ['S' => $faker->city()],
-        'Postcode' => ['S' => $faker->postcode()],
-    ]);
-    $customer->addPhone($faker->phoneNumber());
-    $customer->addEmail($faker->email());
+    $customerPartitionKey = sprintf('customer#%s', Uuid::uuid4()->toString());
+    $customerName = $faker->name();
 
-    printf("Customer \"%s\" created.\n", $customer->getName());
+    // find existing publisher item
+    $result = DynamoDB::query([
+        'ExpressionAttributeValues' => [
+            ':pk' => ['S' => 'customers'],
+            ':sk' => ['S' => $customerName],
+        ],
+        'IndexName' => 'GSI1',
+        'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
+    ]);
+
+    // create new publisher item if none found
+    if ($result instanceof Result
+        && !empty($result['Items'])
+    ) {
+        throw new Exception(sprintf('Customer "%s" already exists in the table.', $customerName));
+    }
+
+    /*
+     * write customer item
+     */
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $customerPartitionKey],
+            'SK' => ['S' => 'name'],
+            'Value' => ['S' => $customerName],
+            'GSI1PK' => ['S' => 'customers'],
+            'GSI1SK' => ['S' => $customerName],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Customer %s could not be written to the table: %s', $customerPartitionKey, $e->getMessage()));
+    }
+
+    /*
+     * write customer address relation
+     */
+    $addressKey = sprintf('address#%s', Uuid::uuid4()->toString());
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $customerPartitionKey],
+            'SK' => ['S' => $addressKey],
+            'Details' => ['S' => json_encode([
+                'Street1' => ['S' => $faker->streetAddress()],
+                'City' => ['S' => $faker->city()],
+                'Postcode' => ['S' => $faker->postcode()],
+            ])],
+            'Type' => ['S' => 'Home'],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Customer %s Address %s could not be written to the table: %s', $customerPartitionKey, $addressKey, $e->getMessage()));
+    }
+
+    /*
+     * write customer phone relation
+     */
+    $phoneKey = sprintf('phone#%s', Uuid::uuid4()->toString());
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $customerPartitionKey],
+            'SK' => ['S' => $phoneKey],
+            'Value' => ['S' => $faker->phoneNumber()],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Customer %s Phone %s could not be written to the table: %s', $customerPartitionKey, $phoneKey, $e->getMessage()));
+    }
+
+    /*
+     * write customer email relation
+     */
+    $emailKey = sprintf('email#%s', Uuid::uuid4()->toString());
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $customerPartitionKey],
+            'SK' => ['S' => $emailKey],
+            'Value' => ['S' => $faker->email()],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Customer %s Email %s could not be written to the table: %s', $customerPartitionKey, $emailKey, $e->getMessage()));
+    }
+
+    printf("Customer \"%s\" created.\n", $customerName);
 } catch (Throwable $e) {
     printf("An error occurred while adding the Customer: %s", $e->getMessage());
     return 1;
