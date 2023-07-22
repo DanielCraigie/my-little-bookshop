@@ -59,7 +59,7 @@ class Table
     public function confirmNotExists():void
     {
         if ($this->exists()) {
-            throw new Exception(sprintf("Table[%s] not found.", $_ENV['TABLE_NAME']));
+            throw new Exception(sprintf("Table[%s] exists.", $_ENV['TABLE_NAME']));
         }
     }
 
