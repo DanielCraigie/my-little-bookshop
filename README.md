@@ -31,6 +31,7 @@ Follow these steps to setup a working environment.
 # Example Usage
 1. `cd bin`
 2. `./createTable`
+3. `./createBook -d '{"isbn": "0-434-02110-5", "title": "Secret Service", "author": ["Christopher Andrew"], "publisher": "Heinemann - London", "genre": ["History"], "format": "hardback"}'`
 3. `./createSupplier`
 4. `./listSuppliers` (copy supplier name from output)
 5. `./createOrder --supplier-name <supplier name>`
