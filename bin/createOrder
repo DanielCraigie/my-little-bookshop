@@ -21,15 +21,15 @@ endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
+use Brick\Money\Money;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
-use Danielcraigie\Bookshop\models\Order;
-use Danielcraigie\Bookshop\models\Supplier;
+use Ramsey\Uuid\Uuid;
 
 try {
     $table = new Table();
     $table->confirmExists();
-
-    $supplier = new Supplier();
+    $supplier = [];
 
     /*
      * Handle user arguments
@@ -39,24 +39,62 @@ try {
             case '-n':
             case '--supplier-name':
                 // use supplier name search text to locate first match
-                $supplier->loadFromName($argv[++$i]);
+                $supplierName = $argv[++$i];
+
+                $results = DynamoDB::query([
+                    'IndexName' => 'GSI1',
+                    'KeyConditionExpression' => 'GSI1PK=:pk AND begins_with(GSI1SK, :sk)',
+                    'ExpressionAttributeValues' => [
+                        ':pk' => ['S' => 'suppliers'],
+                        ':sk' => ['S' => $supplierName],
+                    ],
+                ]);
+
+                if (empty($results)) {
+                    throw new Exception(sprintf('Could not find Supplier with the name "%s"', $supplierName));
+                } else if (count($results) > 1) {
+                    throw new Exception(sprintf('Found more than one Supplier with the name "%s": %s'. $supplierName, print_r($results, true)));
+                }
+
+                $supplier = reset($results);
                 break;
         }
     }
 
-    if ($supplier->isNewModel()) {
-        throw new Exception('Supplier could not be found.');
+    /*
+     * write order item
+     */
+    $orderPartitionKey = sprintf('order#%s', Uuid::uuid4()->toString());
+    $orderTotal = Money::of(0.0, $_ENV['CURRENCY']);
+
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $orderPartitionKey],
+            'SK' => ['S' => 'details'],
+            'StartDate' => ['S' => (new DateTime('now'))->format('c')],
+            'Total' => ['S' => (string) $orderTotal->getAmount()],
+            'GSI1PK' => ['S' => 'orders'],
+            'GSI1SK' => ['S' => $orderPartitionKey],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Order %s could not be written to the table: %s', $orderPartitionKey, $e->getMessage()));
     }
 
-    /*
-     * create new order
-     */
-    $order = new Order();
-    $order->setStartDate(new DateTime('now'));
-    $order->setSupplier($supplier);
-    $order->create();
+    // write supplier relation
+    $supplierPartitionKey = reset($supplier['PK']);
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $orderPartitionKey],
+            'SK' => ['S' => $supplierPartitionKey],
+            'Value' => ['S' => reset($supplier['Value'])],
+            'GSI1PK' => ['S' => $supplierPartitionKey],
+            'GSI1SK' => ['S' => $orderPartitionKey],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Could not set Supplier %s to Order %s: %s', $supplierPartitionKey, $orderPartitionKey, $e->getMessage()));
+    }
 
-    printf("Order[%s] from \"%s\" created.\n", $order->getPartitionKey(), $supplier->getName());
+    printf("Order[%s] from \"%s\" created.\n", $orderPartitionKey, reset($supplier['Value']));
 } catch (Throwable $e) {
     printf("An error occurred while adding the Supplier: %s", $e->getMessage());
     return 1;

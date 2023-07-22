@@ -15,8 +15,9 @@ endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
-use Danielcraigie\Bookshop\models\Supplier;
+use Ramsey\Uuid\Uuid;
 
 try {
     $table = new Table();
@@ -27,21 +28,85 @@ try {
     $faker->addProvider(new Faker\Provider\en_GB\Address($faker));
     $faker->addProvider(new Faker\Provider\en_GB\PhoneNumber($faker));
 
-    /*
-     * Add supplier Name
-     */
-    $supplier = new Supplier();
-    $supplier->setName($faker->company());
-    $supplier->create();
-    $supplier->addAddress([
-        'Street1' => ['S' => $faker->streetAddress()],
-        'City' => ['S' => $faker->city()],
-        'Postcode' => ['S' => $faker->postcode()],
-    ]);
-    $supplier->addPhone($faker->phoneNumber());
-    $supplier->addEmail($faker->email());
+    $supplierPartitionKey = sprintf('supplier#%s', Uuid::uuid4()->toString());
+    $supplierName = $faker->company();
 
-    printf("Supplier \"%s\" created.\n", $supplier->getName());
+    // find existing publisher item
+    $results = DynamoDB::query([
+        'ExpressionAttributeValues' => [
+            ':pk' => ['S' => 'suppliers'],
+            ':sk' => ['S' => $supplierName],
+        ],
+        'IndexName' => 'GSI1',
+        'KeyConditionExpression' => 'GSI1PK=:pk and GSI1SK=:sk',
+    ]);
+
+    // create new publisher item if none found
+    if (!empty($results)) {
+        throw new Exception(sprintf('Supplier "%s" already exists in the table.', $supplierName));
+    }
+
+    /*
+     * write customer item
+     */
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $supplierPartitionKey],
+            'SK' => ['S' => 'name'],
+            'Value' => ['S' => $supplierName],
+            'GSI1PK' => ['S' => 'suppliers'],
+            'GSI1SK' => ['S' => $supplierName],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Supplier %s could not be written to the table: %s', $supplierPartitionKey, $e->getMessage()));
+    }
+
+    /*
+     * write customer address relation
+     */
+    $addressKey = sprintf('address#%s', Uuid::uuid4()->toString());
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $supplierPartitionKey],
+            'SK' => ['S' => $addressKey],
+            'Street1' => ['S' => $faker->streetAddress()],
+            'City' => ['S' => $faker->city()],
+            'Postcode' => ['S' => $faker->postcode()],
+            'Type' => ['S' => 'Home'],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Supplier %s Address %s could not be written to the table: %s', $supplierPartitionKey, $addressKey, $e->getMessage()));
+    }
+
+    /*
+     * write customer phone relation
+     */
+    $phoneKey = sprintf('phone#%s', Uuid::uuid4()->toString());
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $supplierPartitionKey],
+            'SK' => ['S' => $phoneKey],
+            'Value' => ['S' => $faker->phoneNumber()],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Supplier %s Phone %s could not be written to the table: %s', $supplierPartitionKey, $phoneKey, $e->getMessage()));
+    }
+
+    /*
+     * write customer email relation
+     */
+    $emailKey = sprintf('email#%s', Uuid::uuid4()->toString());
+    try {
+        DynamoDB::putItem([
+            'PK' => ['S' => $supplierPartitionKey],
+            'SK' => ['S' => $emailKey],
+            'Value' => ['S' => $faker->email()],
+        ]);
+    } catch (Exception $e) {
+        throw new Exception(sprintf('Supplier %s Email %s could not be written to the table: %s', $supplierPartitionKey, $emailKey, $e->getMessage()));
+    }
+
+    printf("Supplier \"%s\" created.\n", $supplierName);
 } catch (Throwable $e) {
     printf("An error occurred while adding the Supplier: %s", $e->getMessage());
     return 1;

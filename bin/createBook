@@ -43,7 +43,6 @@ endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\Result;
 use Brick\Money\Money;
 use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
@@ -81,16 +80,14 @@ try {
     $bookPartitionKey = sprintf('book#%s', $details['isbn'] ?? '');
 
     // verify that ISBN isn't already in use
-    $result = DynamoDB::query([
+    $results = DynamoDB::query([
         'ExpressionAttributeValues' => [
             ':pk' => ['S' => $bookPartitionKey],
         ],
         'KeyConditionExpression' => 'PK=:pk',
     ]);
 
-    if (!$result instanceof Result
-        || !empty($result['Items'])
-    ) {
+    if (!empty($results)) {
         throw new Exception('ISBN is already in use, you can not add a book twice.');
     }
 
@@ -103,11 +100,9 @@ try {
         DynamoDB::putItem([
             'PK' => ['S' => $bookPartitionKey],
             'SK' => ['S' => 'details'],
-            'Details' => ['S' => json_encode([
-                'TagLine' => ['S' => $details['tagLine'] ?? ''],
-                'Format' => ['S' => $details['format']],
-                'Price' => ['S' => (string) $price->getAmount()],
-            ], true)],
+            'TagLine' => ['S' => $details['tagLine'] ?? ''],
+            'Format' => ['S' => $details['format']],
+            'Price' => ['S' => (string) $price->getAmount()],
             'Quantity' => ['N' => 0],
         ]);
     } catch (Exception $e) {
@@ -134,7 +129,7 @@ try {
      */
     foreach ($details['author'] as $author) {
         // search for existing author record
-        $result = DynamoDB::query([
+        $results = DynamoDB::query([
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => 'authors'],
                 ':sk' => ['S' => $author],
@@ -144,9 +139,7 @@ try {
         ]);
 
         // add author if not found
-        if (!$result instanceof Result
-            || empty($result['Items'])
-        ) {
+        if (empty($results)) {
             $authorPartitionKey = sprintf('author#%s', Uuid::uuid4()->toString());
 
             try {
@@ -160,10 +153,11 @@ try {
             } catch (Exception $e) {
                 throw new Exception(sprintf('Could not write Author %s to table: %s', $authorPartitionKey, $e->getMessage()));
             }
-        } else if ($result['Count'] > 1) {
-            throw new Exception(sprintf('More than one Author (%d) matched against search term "%s": %s', $result['Count'], $author, print_r($result['Items'], true)));
+        } else if (count($results) > 1) {
+            throw new Exception(sprintf('More than one Author (%d) matched against search term "%s": %s', count($results), $author, print_r($results, true)));
         } else {
-            $authorPartitionKey = $result['Items'][0]['PK']['S'];
+            $authorItem = reset($results);
+            $authorPartitionKey = $authorItem['PK'];
         }
 
         try {
@@ -184,7 +178,7 @@ try {
     $publisher = $details['publisher'];
 
     // find existing publisher item
-    $result = DynamoDB::query([
+    $results = DynamoDB::query([
         'ExpressionAttributeValues' => [
             ':pk' => ['S' => 'publishers'],
             ':sk' => ['S' => $publisher],
@@ -194,9 +188,7 @@ try {
     ]);
 
     // create new publisher item if none found
-    if (!$result instanceof Result
-        || empty($result['Items'])
-    ) {
+    if (empty($results)) {
         $publisherPartitionKey = sprintf('publisher#%s', Uuid::uuid4()->toString());
 
         try {
@@ -210,10 +202,11 @@ try {
         } catch (Exception $e) {
             throw new Exception(sprintf('Could not write Publisher %s to table: %s', $publisherPartitionKey, $e->getMessage()));
         }
-    } else if ($result['Count'] > 1) {
-        throw new Exception(sprintf('More than one Publisher (%d) matched against search term "%s": %s', $result['Count'], $publisher, print_r($result['Items'], true)));
+    } else if (count($results) > 1) {
+        throw new Exception(sprintf('More than one Publisher (%d) matched against search term "%s": %s', count($results), $publisher, print_r($results, true)));
     } else {
-        $publisherPartitionKey = $result['Items'][0]['PK']['S'];
+        $publisherItem = reset($results);
+        $publisherPartitionKey = reset($publisherItem['PK']);
     }
 
     try {
@@ -232,7 +225,7 @@ try {
      */
     foreach ($details['genre'] as $genre) {
         // search for existing genre record
-        $result = DynamoDB::query([
+        $results = DynamoDB::query([
             'ExpressionAttributeValues' => [
                 ':pk' => ['S' => 'genres'],
                 ':sk' => ['S' => $genre],
@@ -242,9 +235,7 @@ try {
         ]);
 
         // add genre if not found
-        if (!$result instanceof Result
-            || empty($result['Items'])
-        ) {
+        if (empty($results)) {
             $genrePartitionKey = sprintf('genre#%s', Uuid::uuid4()->toString());
 
             try {
@@ -258,10 +249,11 @@ try {
             } catch (Exception $e) {
                 throw new Exception(sprintf('Could not write Genre %s to table: %s', $genrePartitionKey, $e->getMessage()));
             }
-        } else if ($result['Count'] > 1) {
-            throw new Exception(sprintf('More than one Genre (%d) matched against search term "%s": %s', $result['Count'], $genre, print_r($result['Items'], true)));
+        } else if (count($results) > 1) {
+            throw new Exception(sprintf('More than one Genre (%d) matched against search term "%s": %s', count($results), $genre, print_r($results, true)));
         } else {
-            $genrePartitionKey = $result['Items'][0]['PK']['S'];
+            $genreItem = reset($results);
+            $genrePartitionKey = reset($genreItem['PK']);
         }
 
         try {

@@ -15,7 +15,6 @@ endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
-use Aws\Result;
 use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
 use Ramsey\Uuid\Uuid;
@@ -33,7 +32,7 @@ try {
     $customerName = $faker->name();
 
     // find existing publisher item
-    $result = DynamoDB::query([
+    $results = DynamoDB::query([
         'ExpressionAttributeValues' => [
             ':pk' => ['S' => 'customers'],
             ':sk' => ['S' => $customerName],
@@ -43,9 +42,7 @@ try {
     ]);
 
     // create new publisher item if none found
-    if ($result instanceof Result
-        && !empty($result['Items'])
-    ) {
+    if (!empty($results)) {
         throw new Exception(sprintf('Customer "%s" already exists in the table.', $customerName));
     }
 
@@ -72,11 +69,9 @@ try {
         DynamoDB::putItem([
             'PK' => ['S' => $customerPartitionKey],
             'SK' => ['S' => $addressKey],
-            'Details' => ['S' => json_encode([
-                'Street1' => ['S' => $faker->streetAddress()],
-                'City' => ['S' => $faker->city()],
-                'Postcode' => ['S' => $faker->postcode()],
-            ])],
+            'Street1' => ['S' => $faker->streetAddress()],
+            'City' => ['S' => $faker->city()],
+            'Postcode' => ['S' => $faker->postcode()],
             'Type' => ['S' => 'Home'],
         ]);
     } catch (Exception $e) {
