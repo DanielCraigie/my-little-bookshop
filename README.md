@@ -36,7 +36,7 @@ Follow these steps to setup a working environment.
 4. `./listSuppliers` (copy supplier name from output)
 5. `./createOrder --supplier-name <supplier name>`
 6. `./listOrders` (copy order# partition key)
-7. `./updateOrder --partition-key <Order PK> --books '[{"ISBN":"979-8365145672","Title":"The DynamoDB Book","Price":30.0,"Quantity":10}]'`
+7. `./updateOrder --partition-key <Order PK> --books '[{"ISBN":"0-434-02110-5","Price":30.0,"Quantity":10}]'`
 8. `./getOrder' --partition-key <Order PK>`
 9. `./scanTable`
 
