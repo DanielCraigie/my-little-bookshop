@@ -1,0 +1,59 @@
+#!/usr/bin/env php
+<?php
+if (in_array('--help', $argv)
+    || in_array('-h', $argv)
+):?>
+listBooks - lists Books
+
+Usage:
+    listBooks
+    listBooks --help
+
+<?php
+exit;
+endif;
+
+require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
+
+use Aws\Result;
+use Danielcraigie\Bookshop\AWS\AWS;
+use Danielcraigie\Bookshop\AWS\dynamodb\Table;
+
+try {
+    $table = new Table();
+    $table->confirmExists();
+
+    $resultTotal = 0;
+    $query = [
+        'IndexName' => 'GSI1',
+        'KeyConditionExpression' => 'GSI1PK=:val',
+        'ExpressionAttributeValues' => [
+            ':val' => ['S' => 'titles'],
+        ],
+        'TableName' => $_ENV['TABLE_NAME'],
+    ];
+
+    do {
+        $result = AWS::DynamoDB()->query($query);
+
+        if (!$result instanceof Result) {
+            throw new Exception('Could not query table.');
+        }
+
+        $resultTotal += $result['Count'];
+
+        $suppliers = [];
+        foreach ($result['Items'] as $item) {
+            printf("[PK] => %s, [Title] => \"%s\"\n", reset($item['PK']), reset($item['Value']));
+        }
+
+        if (!empty($result['LastEvaluatedKey'])) {
+            $query['ExclusiveStartKey'] = $result['LastEvaluatedKey'];
+        }
+    } while (!empty($result['LastEvaluatedKey']));
+
+    printf("%d records found.\n", $resultTotal);
+} catch (Throwable $e) {
+    printf("An error occurred while querying the table: %s", $e->getMessage());
+    return 1;
+}
