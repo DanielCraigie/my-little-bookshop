@@ -9,7 +9,7 @@ trait PartitionKey
     /**
      * @var string $partitionKey
      */
-    private string $partitionKey;
+    private string $partitionKey = '';
 
     /**
      * @var bool
@@ -17,34 +17,11 @@ trait PartitionKey
     private bool $newModel = true;
 
     /**
+     * @param string $prefix
      * @return string
      */
-    public function getPartitionKey():string
+    public function createPartitionKey(string $prefix):string
     {
-        if (empty($this->partitionKey)) {
-            // auto generate PartitionKey for new Objects
-            $classPath = explode('\\', get_class($this));
-            $this->partitionKey = sprintf('%s#%s', mb_strtolower(end($classPath)), Uuid::uuid4()->toString());
-        }
-
-        return $this->partitionKey;
-    }
-
-    /**
-     * @param string $pk
-     * @return void
-     */
-    protected function setPartitionKey(string $pk):void
-    {
-        $this->partitionKey = $pk;
-        $this->newModel = false;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isNewModel():bool
-    {
-        return $this->newModel;
+        return sprintf('%s#%s', mb_strtolower($prefix), Uuid::uuid4()->toString());
     }
 }

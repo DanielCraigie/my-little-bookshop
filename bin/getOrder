@@ -19,15 +19,17 @@ endif;
 
 require implode(DIRECTORY_SEPARATOR, ['..', '.bootstrap.php']);
 
+use Brick\Money\Money;
+use Danielcraigie\Bookshop\AWS\dynamodb\DynamoDB;
 use Danielcraigie\Bookshop\AWS\dynamodb\Table;
-use Danielcraigie\Bookshop\models\Order;
 
 try {
     // verify table exists
     $table = new Table();
     $table->confirmExists();
 
-    $order = new Order();
+    $orderPk = '';
+    $orderDetails = [];
 
     /*
      * Handle user arguments
@@ -36,17 +38,64 @@ try {
         switch ($argv[$i]) {
             case '-p':
             case '--partition-key':
-                $order->loadFromPartitionKey($argv[++$i]);
+                $orderPk = $argv[++$i];
+
+                $results = DynamoDb::query([
+                    'ExpressionAttributeNames' => [
+                        '#startdate' => 'StartDate',
+                        '#total' => 'Total',
+                        '#quantity' => 'Quantity',
+                    ],
+                    'ExpressionAttributeValues' => [
+                        ':pk' => ['S' => $orderPk],
+                        ':sk' => ['S' => 'details'],
+                    ],
+                    'KeyConditionExpression' => 'PK=:pk AND SK=:sk',
+                    'ProjectionExpression' => '#startdate, #total, #quantity',
+                ]);
+
+                if (empty($results)) {
+                    throw new Exception(sprintf("Could not find details for Order \"%s\"", $orderPk));
+                }
+
+                foreach (reset($results) as $attribute => $value) {
+                    $orderDetails[$attribute] = reset($value);
+                }
+
                 break;
         }
     }
 
-    if ($order->isNewModel()) {
-        throw new Exception('Order could not be found.');
+    /*
+     * Print opening order line
+     */
+    $startDate = new DateTime($orderDetails['StartDate']);
+    printf("Order \"%s\" started on %s:\n", $orderPk, $startDate->format('d/m/Y'));
+
+    /*
+     * Print details of ordered items
+     */
+    $books = DynamoDb::query([
+        'ExpressionAttributeNames' => [
+            '#value' => 'Value',
+            '#price' => 'Price',
+            '#quantity' => 'Quantity',
+        ],
+        'ExpressionAttributeValues' => [
+            ':pk' => ['S' => $orderPk],
+            ':sk' => ['S' => 'book#'],
+        ],
+        'KeyConditionExpression' => 'PK=:pk AND begins_with(SK, :sk)',
+        'ProjectionExpression' => 'SK, #value, #price, #quantity',
+        'Table' => $_ENV['TABLE_NAME'],
+    ]);
+
+    foreach ($books as $book) {
+        $price = Money::of(reset($book['Price']), $_ENV['CURRENCY']);
+        printf("%s x %s (%s) @ £%s\n", reset($book['Quantity']), reset($book['SK']), reset($book['Value']), (string) $price->getAmount());
     }
 
-    printf("Order[%s]\n", $order->getPartitionKey());
-    $order->printDataRecords();
+    printf("Total items: %s; Order Total: £%s\n", $orderDetails['Quantity'], $orderDetails['Total']);
 } catch (Throwable $e) {
     printf("An error occurred while querying the table: %s", $e->getMessage());
     return 1;

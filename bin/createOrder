@@ -73,6 +73,7 @@ try {
             'SK' => ['S' => 'details'],
             'StartDate' => ['S' => (new DateTime('now'))->format('c')],
             'Total' => ['S' => (string) $orderTotal->getAmount()],
+            'Quantity' => ['S' => '0'],
             'GSI1PK' => ['S' => 'orders'],
             'GSI1SK' => ['S' => $orderPartitionKey],
         ]);
